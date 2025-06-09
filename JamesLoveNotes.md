@@ -55,3 +55,12 @@ DEPENDENCIES NEEDED:
     Data Collection: CVEs collected from https://github.com/nluedtke/linux_kernel_cves. Data enriched from National Vulnerability Database with classifications and descriptions as well. Find patched and unpatched code from project links related to CVE-IDs. Data is checked for accuracy (not still vulnerable) by checking if further patches were done.
     
     Physical Requirements: None
+
+
+How to run this code:
+
+python ChatGPT_Extraction.py --extract_knowledge --store_knowledge --extract_only_once --model_name gpt-3.5-turbo --CWE_list CWE-416 --model_settings
+
+python LLM4Detection_baseline.py --cwe_list CWE-416 --model-name "gpt-3.5-turbo" --prompt-type 0 --model_settings
+
+python VulRAG_detection.py --cwe-list CWE-416 --model-name gpt-3.5-turbo --summary-model-name gpt-3.5-turbo --model_settings --retrieve_by_code
