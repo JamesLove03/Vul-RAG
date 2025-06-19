@@ -79,9 +79,10 @@ def parse_command_line_arguments():
 if __name__ == '__main__':
 
     args = parse_command_line_arguments()
-
+    print("command line parsed\n")
     KnowledgeE = KnowledgeExtractor(model_name = args.model_name)
     #knowledge extraction
+    print("begin extracting knowledge")
     if args.extract_knowledge:
         for cwe_name in args.CWE_list:
             KnowledgeE.extract_knowledge_from_cwe(

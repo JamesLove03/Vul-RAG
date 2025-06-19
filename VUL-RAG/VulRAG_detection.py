@@ -124,8 +124,7 @@ if __name__ == '__main__':
         cve_list = []
         test_clean_data_path = PathUtil.test_data(constant.TEST_DATA_FILE_NAME.format(cwe_id = cwe_id), "json")
         test_clean_data = DataUtils.load_json(test_clean_data_path)
-        for _, v in test_clean_data.items():
-            cve_list.extend(v['item'])
+        cve_list = test_clean_data
         logging.info(f"Start detecting {len(cve_list)} samples for {cwe_id}...")
 
         vul_list = []
@@ -176,7 +175,7 @@ if __name__ == '__main__':
                     )
                     non_vul_detect_result = VulD.detection_pipeline(
                         cve_item['code_after_change'],
-                        "code_after_change",
+                        "code_after_change",    
                         cwe_id,
                         args.retrieval_top_k,
                         sample_id = cve_item['id'],

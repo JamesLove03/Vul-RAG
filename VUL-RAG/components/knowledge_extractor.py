@@ -2,7 +2,7 @@ import json
 from tqdm import tqdm
 from common.util.path_util import PathUtil
 from common.util.data_utils import DataUtils
-from es_retrival import LLM4DetectionRetrieval
+from .es_retrival import LLM4DetectionRetrieval
 from common import constant
 from common.util import common_util
 
@@ -28,6 +28,7 @@ class KnowledgeExtractor:
     def __init__(self, model_name):
         self.model_instance = ModelManager.get_model_instance(model_name)
         self.data_lst = []
+        print("knowledge extractor initialized")
 
     def get_dict(self, vul_knowledge_output):
         vul_knowledge_output = vul_knowledge_output.split("\"vulnerability_behavior\"")[1]
@@ -96,17 +97,30 @@ class KnowledgeExtractor:
                 # get purpose
                 purpose_messages = self.model_instance.get_messages(purpose_prompt, constant.DEFAULT_SYS_PROMPT)
                 purpose_output = self.model_instance.get_response_with_messages(purpose_messages, **model_settings_dict)
-
+                if(purpose_output is None):
+                    logging.warning(f"Skipping{item['cve_id']} due to missing purpose_output")
+                    continue
                 # get function
                 function_messages = self.model_instance.get_messages(function_prompt, constant.DEFAULT_SYS_PROMPT)
                 function_output = self.model_instance.get_response_with_messages(function_messages, **model_settings_dict)
-
+                if(function_output is None):
+                    logging.warning(f"Skipping{item['cve_id']} due to missing function_output")
+                    continue
+                
                 # get analysis
                 messages = self.model_instance.get_messages(analysis_prompt, constant.DEFAULT_SYS_PROMPT)
                 analysis_output = self.model_instance.get_response_with_messages(messages, **model_settings_dict)
+                if(analysis_output is None):
+                    logging.warning(f"Skipping{item['cve_id']} due to missing analysis_output")
+                    continue
+                
                 messages.append({"role": "assistant", "content": analysis_output})
                 messages.append({"role": "user", "content": knowledge_extraction_prompt})
                 vul_knowledge_output = self.model_instance.get_response_with_messages(messages, **model_settings_dict)
+                if(vul_knowledge_output is None):
+                    logging.warning(f"Skipping{item['cve_id']} due to missing vul_knowledge_output")
+                    continue
+
                 output_dict = self.get_dict(vul_knowledge_output)
                 output_dict["GPT_analysis"] = analysis_output
                 output_dict["GPT_purpose"] = common_util.extract_LLM_response_by_prefix(

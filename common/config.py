@@ -44,7 +44,7 @@ ES_USE_CUSTOM_SETTINGS = False
 deepseek_api_base = "https://api.deepseek.com/v1"
 deepseek_api_key = DataUtils.load_data_from_pickle_file(PathUtil.api_keys_data("deepseek_api_key", "pkl"))
 
-openkey_openai_api_base = "https://openkey.cloud/v1"
+openkey_openai_api_base = "https://api.openai.com/v1/"
 openkey_openai_api_key = DataUtils.load_data_from_pickle_file(PathUtil.api_keys_data("openkey_openai_api_key", "pkl"))
 
 qwen_api_base = "https://dashscope.aliyuncs.com/compatible-mode/v1"

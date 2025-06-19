@@ -59,8 +59,68 @@ DEPENDENCIES NEEDED:
 
 How to run this code:
 
-python ChatGPT_Extraction.py --extract_knowledge --store_knowledge --extract_only_once --model_name gpt-3.5-turbo --CWE_list CWE-416 --model_settings
+python ChatGPT_Extraction.py --extract_knowledge --store_knowledge --extract_only_once --model_name gpt-3.5-turbo --CWE_list CWE-416 --model_settings --resume
 
-python LLM4Detection_baseline.py --cwe_list CWE-416 --model-name "gpt-3.5-turbo" --prompt-type 0 --model_settings
+python LLM4Detection_baseline.py --CWE_list CWE-416 --model-name "gpt-3.5-turbo" --prompt-type 0 --model_settings
 
-python VulRAG_detection.py --cwe-list CWE-416 --model-name gpt-3.5-turbo --summary-model-name gpt-3.5-turbo --model_settings --retrieve_by_code
+python VulRAG_detection.py --CWE_list CWE-416 --model-name gpt-3.5-turbo --summary-model-name gpt-3.5-turbo --model_settings --retrieve_by_code
+
+
+
+Notes for ChatGPT_Extraction.py: Need to create files for each CWE named as data/Linux_kernel_{cwe_id}_clean_data.json
+
+should be able to do this based on the clean data top10 and dividing by CWE into 10 seperate files that are formatted like above
+
+Then this file should output to output/vul_knowledge_data{model_name}_{cwe_id}_316_pattern_all
+
+Now when VulRAG_detection runs it will look in output/vul_knowledge_datagpt-3.5-turbo_{cwe_id}
+
+DIVIDED STATS:
+
+Total number of clean CVE examples: 
+
+Starts with 4313 examples
+
+After division there are 23 different CWEs identified in the list. We are only considering the top 10 CWEs 
+"CWE-416": "Use After Free", !!
+"CWE-125": "Out-of-bounds Read",
+"CWE-787": "Out-of-bounds Write",
+"CWE-476": "NULL Pointer Dereference",
+"CWE-401": "Missing Release of Memory after Effective Lifetime",
+"CWE-190": "Integer Overflow or Wraparound", !!
+"CWE-362": "Concurrent Execution using Shared Resource with Improper Synchronization ('Race Condition')"
+"CWE-122": "Heap-based Buffer Overflow",
+"CWE-119": "Improper Restriction of Operations within the Bounds of a Memory Buffer", !!
+"CWE-120": "Buffer Copy without Checking Size of Input ('Classic  ')",
+
+make sure to include this line when running
+$env:PYTHONPATH = "C:\Users\james\work\Vul-RAG"
+and make sure to start elasticsearch
+
+
+
+FAILED CVE ENTRIES:
+
+CWE-119: 
+
+CWE-362: 
+    -CVE-2016-2546: Expecting ':' delimiter
+    -CVE-2017-15265: Expecting ':' delimiter
+
+CWE-416:
+    -CVE-2023-3567: Expecting ':' delimiter
+    -CVE-2024-0193: Expecting ':' delimiter
+
+CWE-476
+    -CVE-2023-28328: Expecting a ':' delimiter
+    -CVE-2023-5972: Expecting a ':' delimiter
+
+CWE-787
+    -CVE-2018-12714: Expecting a ':' delimiter
+    -CVE-2020-0465: Exceeded maximum number of tokens
+    -CVE-2021-43975: Expecting a ':' delimiter
+   
+
+ElasticSearch Error: 
+    How to start elasticsearch: cd C:\elasticsearch-9.0.2-windows-x86_64\elasticsearch-9.0.2\bin 
+    elasticsearch.bat

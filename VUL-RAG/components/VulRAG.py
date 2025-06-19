@@ -1,7 +1,7 @@
 from common.util.data_utils import DataUtils
 import common.config as cfg
 import logging
-from es_retrival import LLM4DetectionRetrieval
+from .es_retrival import LLM4DetectionRetrieval
 from common.util import common_util
 from common import constant
 from common.constant import KnowledgeDocumentName as kdn
@@ -9,6 +9,7 @@ from common.model_manager import ModelManager
 from common import common_prompt
 import pdb
 import logging
+import json
 
 class VulRAGDetector:
     def __init__(
@@ -299,8 +300,9 @@ class VulRAGDetector:
         # else, continue to detect the next knowledge
         detect_result = []
         flag = 0
-
+        counter = 0
         for vul_knowledge in vul_knowledge_list[:min(cfg.MAX_RETRIEVE_KNOWLEDGE_NUM, len(vul_knowledge_list))]:
+            counter += 1
             if no_explanation:
                 vul_detect_prompt = common_prompt.VulRAGPrompt.generate_detect_vul_prompt_without_explanation(
                     code_snippet, 
@@ -362,6 +364,8 @@ class VulRAGDetector:
             else:
                 continue
 
+    #This line will create a json file that will be used to investigate how accurate the library is
+        
         return {
             "id": sample_id,
             "cve_id": query_cve, 
