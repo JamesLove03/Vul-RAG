@@ -198,32 +198,41 @@ For example, instead of writing mutex_lock(&dmxdev->mutex), simply use mutex_loc
 class VulRAGPrompt:
     @staticmethod
     def generate_detect_vul_prompt(code_snippet, cve_knowledge) -> str:
-        return f"""I want you to act as a vulnerability detection expert, given the following code snippet and related vulnerability knowledge, please detect whether there is a vulnerability in the code snippet.
+        return f"""I want you to determine whether a specific vulnerability exists in a piece of code. Focus on behavioral patterns instead of keyword or syntax matching.
+Here is some relevant information about the vulnerability and how to identify it.
+Vulnerability Knowledge:
+'''
+{cve_knowledge}
+'''
+Here is the code snippet you will be investigating.
 Code Snippet:
 '''
 {code_snippet}
 '''
-Vulnerability Knowledge:
-In a similar code scenario, the following vulnerabilities have been found:
-'''
-{cve_knowledge}
-'''
-Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Perform a step-by-step analysis to identify whether the code snippet demonstrates any behaviors or logic similar to what is described in the vulnerability knowledge. Focus only on the provided information - do not infer or assume unrelated vulnerabilities. Avoid assuming a vulnerability exists without clear evidence. Avoid overgeneralizing the vulnerability knowledge. 
+After your step-by-step comparison, recheck your reasoning to ensure your conclusion is based on specific, observable code behavior.
+Conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value} 
+Remember we are trying to decide if the provided code is vulnerable to the provided vulnerability only.
 """
+
 
     @staticmethod
     def generate_detect_sol_prompt(code_snippet, cve_knowledge) -> str:
-        return f"""I want you to act as a vulnerability detection expert, given the following code snippet and related vulnerability knowledge, please detect whether there are necessary solution behaviors in the code snippet, which can prevent the occurrence of related vulnerabilities in the vulnerability knowledge.
+        return f"""I want you to determine whether the following code contains the specific solution behaviors or logic that address and fix the identified vulnerability.
+Here is the knowledge on the identified vulnerability and how it has been mitigated in similar cases.
+Vulnerability Knowledge:
+'''
+{cve_knowledge}
+'''
+Here is the code that will be evaluated for solutions.
 Code Snippet:
 '''
 {code_snippet}
 '''
-Vulnerability Knowledge:
-In a similar code scenario, the following vulnerabilities have been found:
-'''
-{cve_knowledge}
-'''
-Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Perform a step-by-step analysis to determine whether the code snippet contains the explicit solution behaviors as described in the Vulnerability Knowledge. Focus only on the provided vulnerability and its solution information - do not infer unrelated vulnerabilities or generic solutions. Avoid assuming a solution is present without clear evidence. Avoid overgeneralizing from partial matches. Focus on the logic and behavior of the code, instead of keywords or structure. 
+After your step-by-step analysis, recheck your reasoning to ensure your conclusion is based on specific, observable mitigation behaviour.
+Conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Remember you are trying to determine if the provided code contains the specific solution described in the provided vulnerability knowledge only.
 """
 
     @staticmethod
