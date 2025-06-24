@@ -1,0 +1,13 @@
+{
+    "True Positive": 50,
+    "True Negative": 20,
+    "False Positive": 42,
+    "False Negative": 12,
+    "Other": 0,
+    "Accurate Pair Count": 14,
+    "Valid Pair Count": 62,
+    "Accurate Library Count": 93,
+    "Accurate Library Rate": 1.5,
+    "Pair Accuracy": 0.22580645161290322,
+    "Average Library Match": 10.790322580645162
+}

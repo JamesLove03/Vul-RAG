@@ -36,7 +36,7 @@
             "code_snippet": "int mlx4_register_vlan(struct mlx4_dev *dev, u8 port, u16 vlan, int *index)\n{\n\tstruct mlx4_vlan_table *table = &mlx4_priv(dev)->port[port].vlan_table;\n\tint i, err = 0;\n\tint free = -1;\n\n\tmutex_lock(&table->mutex);\n\tfor (i = MLX4_VLAN_REGULAR; i < MLX4_MAX_VLAN_NUM; i++) {\n\t\tif (free < 0 && (table->refs[i] == 0)) {\n\t\t\tfree = i;\n\t\t\tcontinue;\n\t\t}\n\n\t\tif (table->refs[i] &&\n\t\t    (vlan == (MLX4_VLAN_MASK &\n\t\t\t      be32_to_cpu(table->entries[i])))) {\n\t\t\t/* Vlan already registered, increase refernce count */\n\t\t\t*index = i;\n\t\t\t++table->refs[i];\n\t\t\tgoto out;\n\t\t}\n\t}\n\n\tif (table->total == table->max) {\n\t\t/* No free vlan entries */\n\t\terr = -ENOSPC;\n\t\tgoto out;\n\t}\n\n\t/* Register new MAC */\n\ttable->refs[free] = 1;\n\ttable->entries[free] = cpu_to_be32(vlan | MLX4_VLAN_VALID);\n\n\terr = mlx4_set_port_vlan_table(dev, port, table->entries);\n\tif (unlikely(err)) {\n\t\tmlx4_warn(dev, \"Failed adding vlan: %u\\n\", vlan);\n\t\ttable->refs[free] = 0;\n\t\ttable->entries[free] = 0;\n\t\tgoto out;\n\t}\n\n\t*index = free;\n\t++table->total;\nout:\n\tmutex_unlock(&table->mutex);\n\treturn err;\n}",
             "detect_result": [
                 {
-                    "vul_knowledge": {
+                    "vul_knowledge": { 
                         "cve_id": "CVE-2022-3636",
                         "vulnerability_behavior": {
                             "preconditions_for_vulnerability": "Improper handling of linked list iteration in the code.",
