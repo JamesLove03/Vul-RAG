@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import time
+import tiktoken
 from haystack.document_stores import ElasticsearchDocumentStore
 
 try:
@@ -14,6 +15,7 @@ from common.util.data_utils import DataUtils
 from common.util.path_util import PathUtil
 import common.config as cfg
 import logging
+import openai
 
 
 from elasticsearch import Elasticsearch
@@ -43,13 +45,51 @@ class ESRetrieval:
             scheme = 'http',
             verify_certs = False,
             index = self.index,
+            embedding_field="embedding",
+            embedding_dim=1536,
+            similarity="cosine",
         )
         self.retriever: ElasticsearchRetriever = ElasticsearchRetriever(
             document_store = self.document_store
         )
 
+    def truncate_to_limit(self, text, max_tokens=8192, model="text-embedding-3-small"):
+        encoding = tiktoken.encoding_for_model(model)
+        tokens = encoding.encode(text)
+        truncated = tokens[:max_tokens]
+        return encoding.decode(truncated)
+
+    def generate_embedding(self, documents):
+        openai.api_key = cfg.openkey_openai_api_key
+        
+        inputs = []
+        for doc in documents:    
+            #get the content from the documents json file
+            truncated = self.truncate_to_limit(doc["content"])
+            inputs.append(truncated)
+        #create our embedding
+        try:    
+            response = openai.embeddings.create( 
+                input= inputs,
+                model="text-embedding-3-small"
+            )
+        except Exception as e:
+            print(f"Failed to embed document: {e}")
+        #return the embedding to the json file
+        for doc, response in zip(documents, response.data):
+            doc["embedding"] = response.embedding
+        
+        #return to the write function
+        return documents
+
     def write_document(self, documents, batch_size = 512):
         try:
+            print(self.index + "\n")
+            
+            keywords = ["gpt_purpose", "code_before_change", "gpt_function"]
+            if any(keyword in self.index for keyword in keywords):
+                documents = self.generate_embedding(documents = documents)
+
             start_time = time.time()
             self.document_store.write_documents(
                 documents = documents,
@@ -59,6 +99,7 @@ class ESRetrieval:
             )
             end_time = time.time()
             logging.info("Write documents finish in %f s." % (end_time - start_time))
+        
         except Exception as e:
             logging.error(f"Error: {e}")
 

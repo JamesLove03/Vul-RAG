@@ -65,7 +65,8 @@ python LLM4Detection_baseline.py --CWE_list CWE-416 --model-name "gpt-3.5-turbo"
 
 python VulRAG_detection.py --CWE_list CWE-416 --model-name gpt-3.5-turbo --summary-model-name gpt-3.5-turbo --model_settings --retrieve_by_code
 
-
+make sure to include this line when running
+$env:PYTHONPATH = "C:\Users\james\work\Vul-RAG"
 
 Notes for ChatGPT_Extraction.py: Need to create files for each CWE named as data/Linux_kernel_{cwe_id}_clean_data.json
 
