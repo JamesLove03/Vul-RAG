@@ -1,0 +1,21 @@
+{
+    "True Negative": 40,
+    "True Positive": 93,
+    "False Negative": 24,
+    "False Positive": 77,
+    "Precision": 0.586,
+    "Recall": 0.5684,
+    "F1 Score": 0.5771,
+    "Accuracy": 0.5684,
+    "False Negative Rate": 0.1026,
+    "False Positive Rate": 0.3291,
+    "True Negative Rate": 0.1709,
+    "True Positive Rate": 0.3974,
+    "Valid Pair Count": 117,
+    "Accurate Pair Count": 29,
+    "Pair_1 Count": 64,
+    "Pair_0 Count": 11,
+    "Pair Accuracy": 0.2479,
+    "Pair_1 Rate": 0.547,
+    "Pair_0 Rate": 0.094
+}

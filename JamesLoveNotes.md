@@ -125,3 +125,10 @@ CWE-787
 ElasticSearch Error: 
     How to start elasticsearch: cd C:\elasticsearch-9.0.2-windows-x86_64\elasticsearch-9.0.2\bin 
     elasticsearch.bat
+
+
+
+Rerun test so first test is with updated queries 
+Second test will be with old queries
+Third Test will be with updated search
+Fourth Test will be with updated search + updated queries
