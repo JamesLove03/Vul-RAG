@@ -198,7 +198,7 @@ For example, instead of writing mutex_lock(&dmxdev->mutex), simply use mutex_loc
 class VulRAGPrompt:
     @staticmethod
     def generate_detect_vul_prompt(code_snippet, cve_knowledge) -> str:
-        return f"""I want you to determine whether a specific vulnerability exists in a piece of code. Focus on behavioral patterns instead of keyword or syntax matching.
+       return f"""I want you to determine whether a specific vulnerability exists in a piece of code. Focus on behavioral patterns instead of keyword or syntax matching.
 Here is some relevant information about the vulnerability and how to identify it.
 Vulnerability Knowledge:
 '''
@@ -214,7 +214,6 @@ After your step-by-step comparison, recheck your reasoning to ensure your conclu
 Conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value} 
 Remember we are trying to decide if the provided code is vulnerable to the provided vulnerability only.
 """
-
 
     @staticmethod
     def generate_detect_sol_prompt(code_snippet, cve_knowledge) -> str:

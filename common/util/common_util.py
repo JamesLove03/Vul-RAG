@@ -130,6 +130,10 @@ def calculate_metrics(**confusion_matrix) -> dict:
     TP = confusion_matrix.get(mk.TP.value)
     FN = confusion_matrix.get(mk.FN.value)
     FP = confusion_matrix.get(mk.FP.value)
+    PLE = confusion_matrix.get(mk.PLE.value)
+    CLE = confusion_matrix.get(mk.CLE.value)
+    WLE = confusion_matrix.get(mk.WLE.value)
+    SPC = confusion_matrix.get(mk.SPC.value)
 
     if TN is None or TP is None or FN is None or FP is None:
         logging.error("The confusion matrix must contain TN, TP, FN, and FP.")
@@ -160,7 +164,11 @@ def calculate_metrics(**confusion_matrix) -> dict:
         mk.FNR.value: round(FN_rate, cfg.METRICS_DECIMAL_PLACES_RESERVED),
         mk.FPR.value: round(FP_rate, cfg.METRICS_DECIMAL_PLACES_RESERVED),
         mk.TNR.value: round(TN_rate, cfg.METRICS_DECIMAL_PLACES_RESERVED),
-        mk.TPR.value: round(TP_rate, cfg.METRICS_DECIMAL_PLACES_RESERVED)
+        mk.TPR.value: round(TP_rate, cfg.METRICS_DECIMAL_PLACES_RESERVED),
+        mk.PLE.value: round(PLE, cfg.METRICS_DECIMAL_PLACES_RESERVED),
+        mk.CLE.value: round(CLE, cfg.METRICS_DECIMAL_PLACES_RESERVED),
+        mk.WLE.value: round(WLE, cfg.METRICS_DECIMAL_PLACES_RESERVED),
+        mk.SPC.value: round(SPC, cfg.METRICS_DECIMAL_PLACES_RESERVED)
     }
 
     id_result_map = confusion_matrix.get('id_result_map')
@@ -215,12 +223,19 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
         mk.TN.value: 0,
         mk.TP.value: 0,
         mk.FN.value: 0,
-        mk.FP.value: 0
-    }
+        mk.FP.value: 0,
+        mk.PLE.value: 0,
+        mk.CLE.value: 0,
+        mk.WLE.value: 0,
+        mk.SPC.value: 0,
+    }  
     total_valid_pair_cnt = 0
     total_accurate_pair_cnt = 0
     total_pair_1_cnt = 0
     total_pair_0_cnt = 0
+    total_average_pick_spot = 0
+    total_present_rate = 0
+    total_correct_lib_dec_rate = 0
 
     for result_file in target_result_file_list:
         results = DataUtils.load_json(result_file)
@@ -228,7 +243,11 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
             mk.TN.value: 0,
             mk.TP.value: 0,
             mk.FN.value: 0,
-            mk.FP.value: 0
+            mk.FP.value: 0,
+            mk.PLE.value: 0,
+            mk.CLE.value: 0,
+            mk.WLE.value: 0,
+            mk.SPC.value: 0,
         }
         # the key in the result file is ether xx_data or xx_detect_data
         vul_data = results.get('vul_detect_data', []) + results.get('vul_data', [])
@@ -239,8 +258,20 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
             try:
                 if cfg.RESULT_UNIFORM_MAP[vul['final_result']] == 0:
                     cfs_mat[mk.FN.value] += 1
+                    if vul['lib_present'] == 1 and vul["lib_decision"] == 1:
+                        cfs_mat[mk.WLE.value] += 1
                 else:
                     cfs_mat[mk.TP.value] += 1
+                    if vul['lib_present'] == 1:
+                        if vul['lib_decision'] == 1:
+                            cfs_mat[mk.CLE.value] += 1
+                        elif vul['lib_decision' == 0]:
+                            cfs_mat[mk.WLE.value] += 1
+                
+                cfs_mat[mk.SPC.value] += vul["Counter"]
+                
+                if vul["lib_present"] == 1:
+                    cfs_mat[mk.PLE.value] += 1
 
             except Exception as e:
                 logging.error(f"Error: {e}")
@@ -252,16 +283,30 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
                 mk.GT.value: 1
             }]
 
+
+
         for non_vul in non_vul_data:
             try:
                 if cfg.RESULT_UNIFORM_MAP[non_vul['final_result']] == 0:
                     cfs_mat[mk.TN.value] += 1
+                    if non_vul['lib_present'] == 1 and non_vul["lib_decision"] == 1:
+                        cfs_mat[mk.CLE.value] += 1
                 else:
                     cfs_mat[mk.FP.value] += 1
+                    if non_vul['lib_present'] == 1:
+                        if non_vul['lib_decision'] == 1:
+                            cfs_mat[mk.CLE.value] += 1
+                        elif non_vul['lib_decision'] == 0:
+                            cfs_mat[mk.WLE.value] += 1
+
+                cfs_mat[mk.SPC.value] += vul["Counter"]
+                
+                if vul["lib_present"] == 1:
+                    cfs_mat[mk.PLE.value] += 1
                         
             except Exception as e:
                 logging.error(f"Error: {e}")
-                logging.error(f"Cannot find the final_result for the ID {vul['id']} in the file {result_file_or_dir}.")
+                logging.error(f"Cannot find the final_result for the ID {non_vul['id']} in the file {result_file_or_dir}.")
 
             id_result_map[non_vul['id']].append({
                 **non_vul,
@@ -295,6 +340,10 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
         total_cfs_mat[mk.TP.value] += cfs_mat.get(mk.TP.value)
         total_cfs_mat[mk.FN.value] += cfs_mat.get(mk.FN.value)
         total_cfs_mat[mk.FP.value] += cfs_mat.get(mk.FP.value)
+        total_cfs_mat[mk.PLE.value] += metrics_data.get(mk.PLE.value)
+        total_cfs_mat[mk.CLE.value] += metrics_data.get(mk.CLE.value)
+        total_cfs_mat[mk.WLE.value] += metrics_data.get(mk.WLE.value)
+        total_cfs_mat[mk.SPC.value] += metrics_data.get(mk.SPC.value)
 
         total_valid_pair_cnt += metrics_data.get(mk.VPC.value)
         total_accurate_pair_cnt += metrics_data.get(mk.APC.value)
@@ -327,6 +376,9 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
         total_metrics_data[mk.P0R.value] = total_pair_0_cnt / total_valid_pair_cnt if total_valid_pair_cnt > 0 else -1
         total_metrics_data[mk.P1R.value] = round(total_metrics_data[mk.P1R.value], cfg.METRICS_DECIMAL_PLACES_RESERVED)
         total_metrics_data[mk.P0R.value] = round(total_metrics_data[mk.P0R.value], cfg.METRICS_DECIMAL_PLACES_RESERVED)
+        total_metrics_data[mk.APN.value] = round((total_metrics_data[mk.SPC.value] / total_metrics_data[mk.PLE.value]), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+        total_metrics_data[mk.PC.value] = round((total_metrics_data[mk.PLE.value] / (total_valid_pair_cnt*2)), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+        total_metrics_data[mk.CLR.value] = round((total_metrics_data[mk.CLE.value] / (total_valid_pair_cnt*2)), cfg.METRICS_DECIMAL_PLACES_RESERVED)
         logging.info(f"Total Metrics:")
         logging.info(f"{mk.TP.value}: {total_cfs_mat.get(mk.TP.value)}")
         logging.info(f"{mk.TN.value}: {total_cfs_mat.get(mk.TN.value)}")

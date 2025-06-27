@@ -296,11 +296,14 @@ class VulRAGDetector:
         # logging.info("len(vul_knowledge_list): %d", len(vul_knowledge_list))
 
         # detect vulnerability with the ranking knowledge list, 
-        # if Yes/No or No/Yes is detected, return the result, 
+        # if Yes/No is detected, return the result, 
         # else, continue to detect the next knowledge
         detect_result = []
         flag = 0
         counter = 0
+        lib_counter = 0
+        lib = 0
+        dec = 0
         for vul_knowledge in vul_knowledge_list[:min(cfg.MAX_RETRIEVE_KNOWLEDGE_NUM, len(vul_knowledge_list))]:
             counter += 1
             if no_explanation:
@@ -333,6 +336,15 @@ class VulRAGDetector:
                 "sol_detect_prompt": sol_detect_prompt,
                 "sol_output": sol_output
             }
+            
+            if(query_cve == result["vul_knowledge"]["cve_id"]):
+                lib = 1
+                lib_counter = counter
+                if (constant.LLMResponseKeywords.POS_ANS.value in vul_output and 
+                constant.LLMResponseKeywords.NEG_ANS.value in sol_output):
+                    dec = 1
+
+
             detect_result.append(result)
             if (constant.LLMResponseKeywords.POS_ANS.value in vul_output and 
                 constant.LLMResponseKeywords.NEG_ANS.value in sol_output):
@@ -346,26 +358,19 @@ class VulRAGDetector:
                     "detection_model": self.model_instance.get_model_name(),
                     "summary_model": self.summary_model_instance.get_model_name(),
                     "model_settings": model_settings_dict,
-                    "final_result": 1
-                }
-            elif constant.LLMResponseKeywords.POS_ANS.value in sol_output:
-                {
-                    "id": sample_id,
-                    "cve_id": query_cve,
-                    "purpose": purpose, 
-                    "function": function, 
-                    "code_snippet": code_snippet, 
-                    "detect_result": detect_result, 
-                    "detection_model": self.model_instance.get_model_name(),
-                    "summary_model": self.summary_model_instance.get_model_name(),
-                    "model_settings": model_settings_dict,
-                    "final_result": 0
+                    "final_result": 1,
+                    "lib_present": lib,
+                    "lib_decision": dec,
+                    "Counter": lib_counter
                 }
             else:
                 continue
 
-    #This line will create a json file that will be used to investigate how accurate the library is
-        
+        #if the whole list has been iterated and no vulns then mark non-vulnerable
+        if (lib == 1):
+            dec = 1
+        if(lib == 0):
+            lib_counter = 0
         return {
             "id": sample_id,
             "cve_id": query_cve, 
@@ -376,7 +381,10 @@ class VulRAGDetector:
             "detection_model": self.model_instance.get_model_name(),
             "summary_model": self.summary_model_instance.get_model_name(),
             "model_settings": model_settings_dict,
-            "final_result": -1
+            "final_result": 0,
+            "lib_present": lib,
+            "lib_decision": dec,
+            "Counter": lib_counter
         }
 
 

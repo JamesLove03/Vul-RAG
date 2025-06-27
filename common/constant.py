@@ -47,6 +47,14 @@ class MetricsKeywords(Enum):
     P0R = "Pair_0 Rate"
     P1C = "Pair_1 Count"
     P0C = "Pair_0 Count"
+    PLE = "Present Library Entry"
+    CLE = "Correct Library Entry"
+    WLE = "Wrong Library Entry"
+    SPC = "Sum Pick Counter"
+    NTP = "Number Total Picks"
+    APN = "Average Pick Number"
+    PR = "Presence Rate"
+    CLR = "Correct Lib Decision Rate"
     
     
 
