@@ -46,8 +46,8 @@ class KnowledgeExtractor:
                 item[kdn.PRECONDITIONS.value] = item[kdn.VUL_BEHAVIOR.value][kdn.PRECONDITIONS.value]
                 item[kdn.TRIGGER.value] = item[kdn.VUL_BEHAVIOR.value][kdn.TRIGGER.value]
                 item[kdn.CODE_BEHAVIOR.value] = item[kdn.VUL_BEHAVIOR.value][kdn.CODE_BEHAVIOR.value]
-                if kdn.SOLUTION.value in item[kdn.VUL_BEHAVIOR.value]:
-                    item[kdn.SOLUTION.value] = item[kdn.VUL_BEHAVIOR.value][kdn.SOLUTION.value]
+                if kdn.SOLUTION.value in item:
+                    item[kdn.SOLUTION.value] = item[kdn.SOLUTION.value]
                 answer[cve].append(item)
 
         DataUtils.save_json(path, answer)
@@ -68,19 +68,30 @@ class KnowledgeExtractor:
             ),
             "json"
         )
+        #add json file so that resuming can go normally
 
         if PathUtil.check_file_exists(output_path) and resume:
             current_knowledge_pattern = DataUtils.load_json(output_path)
             output_list = current_knowledge_pattern
+            with open("processed_ids.json", "r") as f:
+                processed_ids = set(json.load(f))
+            print(processed_ids)
+
         else:
             output_list = {}
+            processed_ids = set()
 
         for item in tqdm(self.data_lst):
-            if item["cve_id"] not in output_list.keys():
-                output_list[item["cve_id"]] = []
-            else:
-                if extract_only_once:
-                    continue
+            entry_id = item["id"]
+            cve_id = item["cve_id"]
+
+            if entry_id in processed_ids:
+                continue
+            
+            processed_ids.add(item["id"])
+
+            if cve_id not in output_list:
+                output_list[cve_id] = []
             (
                 purpose_prompt, 
                 function_prompt, 
@@ -136,6 +147,9 @@ class KnowledgeExtractor:
                 output_dict["code_after_change"] = item["code_after_change"]
                 output_dict["modified_lines"] = item["function_modified_lines"]
                 output_list[item["cve_id"]].append(output_dict)
+                #save progress to the dumpfile
+                with open("processed_ids.json", "w") as f:
+                    json.dump(list(processed_ids), f)
 
             except Exception as e:
                 logging.error(f"Error in extracting knowledge for {item['cve_id']}: {e}")

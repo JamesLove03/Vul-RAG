@@ -103,23 +103,19 @@ and make sure to start elasticsearch
 FAILED CVE ENTRIES:
 
 CWE-119: 
+    CVE-2016-3134: Expecting ':' delimiter
 
 CWE-362: 
-    -CVE-2016-2546: Expecting ':' delimiter
-    -CVE-2017-15265: Expecting ':' delimiter
+    CVE-2012-3552: Expecting ':' delimiter
 
 CWE-416:
-    -CVE-2023-3567: Expecting ':' delimiter
-    -CVE-2024-0193: Expecting ':' delimiter
+    
 
-CWE-476
-    -CVE-2023-28328: Expecting a ':' delimiter
-    -CVE-2023-5972: Expecting a ':' delimiter
+CWE-476:
+    
 
-CWE-787
-    -CVE-2018-12714: Expecting a ':' delimiter
-    -CVE-2020-0465: Exceeded maximum number of tokens
-    -CVE-2021-43975: Expecting a ':' delimiter
+CWE-787:
+    
    
 
 ElasticSearch Error: 
