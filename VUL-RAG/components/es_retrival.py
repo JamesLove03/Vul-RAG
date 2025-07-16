@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 import time
 import tiktoken
-from haystack.document_stores import ElasticsearchDocumentStore
+from haystack_integrations.document_stores.elasticsearch import ElasticsearchDocumentStore
+from haystack_integrations.components.retrievers.elasticsearch import ElasticsearchEmbeddingRetriever
 
-try:
-    from haystack.nodes import ElasticsearchRetriever
-except:
+#try:
+from haystack_integrations.components.retrievers.elasticsearch import ElasticsearchBM25Retriever as ElasticsearchRetriever
+#except:
     # In a higher version of farm-haystack, ElasticsearchRetriever does not exist
-    from haystack.nodes import BM25Retriever as ElasticsearchRetriever
+    #from haystack.nodes import BM25Retriever as ElasticsearchRetriever
 
 from common.constant import PreSufConstant
 from common.util.data_utils import DataUtils
@@ -16,6 +17,11 @@ from common.util.path_util import PathUtil
 import common.config as cfg
 import logging
 import openai
+from haystack import Document
+import common.constant as constant
+import uuid
+
+
 
 
 from elasticsearch import Elasticsearch
@@ -29,29 +35,75 @@ class ESRetrieval:
             logging.getLogger('elasticsearch').setLevel(logging.CRITICAL)
 
         self.index = f'{PreSufConstant.DB_NAME_PREFIX_ES.value}{index_name}{PreSufConstant.DB_INDEX_SUFFIX.value}'
+        self.cwe = None
 
         if custom_settings:
             es = Elasticsearch(
-                hosts = cfg.ES_CONFIG["host"], 
-                port = cfg.ES_CONFIG['port']
+                hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"]
             )
             if not es.indices.exists(index = self.index):
                 es.indices.create(index = self.index)
             es.indices.put_settings(index = self.index, body = cfg.ES_SETTINGS)
 
-        self.document_store: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
-            host = cfg.ES_CONFIG['host'],
-            port = cfg.ES_CONFIG['port'],
-            scheme = 'http',
+        self.ds_code_after_change: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
+            hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
-            embedding_field="embedding",
-            embedding_dim=1536,
-            similarity="cosine",
         )
-        self.retriever: ElasticsearchRetriever = ElasticsearchRetriever(
-            document_store = self.document_store
+        self.ds_code_before_change: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
+            hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
+            verify_certs = False,
+            index = self.index,
         )
+        self.ds_gpt_function: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
+            hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
+            verify_certs = False,
+            index = self.index,
+        )
+        self.ds_gpt_purpose: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
+            hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
+            verify_certs = False,
+            index = self.index,
+        )
+        self.ds_solution: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
+            hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
+            verify_certs = False,
+            index = self.index,
+        )
+        self.ds_specific_code_behavior_causing_vulnerability: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
+            hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
+            verify_certs = False,
+            index = self.index,
+        )
+        self.ds_trigger_condition: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
+            hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
+            verify_certs = False,
+            index = self.index,
+        )
+        self.ds_preconditions_for_vulnerability: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
+            hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
+            verify_certs = False,
+            index = self.index,
+        )
+        self.cbc_retriever: ElasticsearchRetriever = ElasticsearchRetriever(
+            document_store = self.ds_code_before_change
+        )
+        self.cbc_embed_retriever: ElasticsearchEmbeddingRetriever = ElasticsearchEmbeddingRetriever(
+            document_store= self.ds_code_before_change,
+        )
+        self.func_retriever: ElasticsearchRetriever = ElasticsearchRetriever(
+            document_store = self.ds_gpt_function
+        )
+        self.func_embed_retriever: ElasticsearchEmbeddingRetriever = ElasticsearchEmbeddingRetriever(
+            document_store= self.ds_gpt_function,
+        )
+        self.purp_retriever: ElasticsearchRetriever = ElasticsearchRetriever(
+            document_store = self.ds_gpt_purpose
+        )
+        self.purp_embed_retriever: ElasticsearchEmbeddingRetriever = ElasticsearchEmbeddingRetriever(
+            document_store= self.ds_code_before_change,
+        )
+
 
     def truncate_to_limit(self, text, max_tokens=8192, model="text-embedding-3-small"):
         encoding = tiktoken.encoding_for_model(model)
@@ -61,42 +113,108 @@ class ESRetrieval:
 
     def generate_embedding(self, documents):
         openai.api_key = cfg.openkey_openai_api_key
-        
-        inputs = []
-        for doc in documents:    
-            #get the content from the documents json file
-            truncated = self.truncate_to_limit(doc["content"])
-            inputs.append(truncated)
-        #create our embedding
-        try:    
-            response = openai.embeddings.create( 
-                input= inputs,
-                model="text-embedding-3-small"
-            )
+        try:
+            inputs = []
+            for doc in documents:    
+                #get the content from the documents json file
+                truncated = self.truncate_to_limit(doc["content"])
+                inputs.append(truncated)
+            #create our embedding
+            try:    
+                response = openai.embeddings.create( 
+                    input= inputs,
+                    model="text-embedding-3-small"
+                )
+            except Exception as e:
+                print(f"Failed to embed document: {e}")
+            #return the embedding to the json file
+            for doc, response in zip(documents, response.data):
+                doc["embedding"] = response.embedding
         except Exception as e:
-            print(f"Failed to embed document: {e}")
-        #return the embedding to the json file
-        for doc, response in zip(documents, response.data):
-            doc["embedding"] = response.embedding
-        
+            print("problem is in generate embedding")    
         #return to the write function
         return documents
 
-    def write_document(self, documents, batch_size = 512):
+    def write_document(self, documents, cwe_name, document_name, batch_size = 512):
         try:
+            self.index = constant.ES_INDEX_NAME_TEMPLATE.format(
+                        lower_cwe_id = cwe_name.lower(), 
+                        lower_document_name = document_name.lower()
+                    )
             print(self.index + "\n")
-            
+
             keywords = ["gpt_purpose", "code_before_change", "gpt_function"]
+            
             if any(keyword in self.index for keyword in keywords):
                 documents = self.generate_embedding(documents = documents)
 
+            for doc in documents:
+                if "id" not in doc or not doc["id"]:
+                    doc["id"] = str(uuid.uuid4())
+            documents = [Document(**doc) for doc in documents]
+
             start_time = time.time()
-            self.document_store.write_documents(
-                documents = documents,
-                index = self.index,
-                batch_size = batch_size,
-                duplicate_documents = 'skip'
-            )
+            
+            keyword_to_key = {
+                "preconditions_for_vulnerability": 0,
+                "trigger_condition": 1,
+                "specific_code_behavior_causing_vulnerability": 2,
+                "solution": 3,
+                "gpt_purpose": 4,
+                "gpt_function": 5,
+                "code_before_change": 6,
+                "code_after_change": 7,
+            }
+            key = next((v for k, v in keyword_to_key.items() if k in document_name.lower()), None)
+
+            if key is not None:
+                if key == 0:
+                    print("adding to preconditions")
+                    self.ds_preconditions_for_vulnerability.write_documents(
+                        documents = documents,
+                    )
+                elif key == 1:
+                    print("adding to trigger")
+                    self.ds_trigger_condition.write_documents(
+                        documents = documents,
+                    )
+                elif key == 2:
+                    print("adding to code bahvior")
+                    self.ds_specific_code_behavior_causing_vulnerability.write_documents(
+                        documents = documents,
+                    )
+                elif key == 3:
+                    print("adding to solution")
+                    self.ds_solution.write_documents(
+                        documents = documents,
+                    )
+                elif key == 4:
+                    print("adding to purpose")
+                    self.ds_gpt_purpose.write_documents(
+                        documents = documents,
+                    )
+                elif key == 5:
+                    print("adding to function")
+                    self.ds_gpt_function.write_documents(
+                        documents = documents,
+                    )
+                elif key == 6:
+                    print("adding to code before")
+                    self.ds_code_before_change.write_documents(
+                        documents = documents,
+                    )
+                elif key == 7:
+                    print("adding to code after")
+                    self.ds_code_after_change.write_documents(
+                        documents = documents,
+                    )
+
+            # self.document_store.write_documents(
+            #     documents = documents,
+            #     index = self.index,
+            #     batch_size = batch_size,
+            #     duplicate_documents = 'skip'
+            # )
             end_time = time.time()
             logging.info("Write documents finish in %f s." % (end_time - start_time))
         
@@ -106,11 +224,150 @@ class ESRetrieval:
     def __format_retrieved_answers(self, answers):
         formatted_answer_list = []
         for answer in answers:
-            formatted_answer_list.append({
-                "content": answer.content,
-                "cve_id": answer.meta["cve_id"]
-            })
+                formatted_answer_list.append({
+                    "content": answer.content,
+                    "cve_id": answer.meta["cve_id"],
+                    "score": answer.score
+                })
         return formatted_answer_list
+    
+    def format(self, answers):
+        formatted_answer_dict = {}
+        for answer in answers:
+            formatted_answer_dict[answer.id] = {
+                "content": answer.content,
+                "cve_id": answer.meta["cve_id"],
+                "score": answer.score,
+                "id": answer.id
+            }
+        print("format output", formatted_answer_dict)
+        return formatted_answer_dict
+
+    def search_embed_cve(self, query, idx, cve_id, top_k=10):
+#Searches for results with a matching cve
+        filters = {
+            "operator": "AND",
+            "conditions": [
+                    {
+                        "field": "meta.cve_id",
+                        "operator": "in",
+                        "value": [cve_id],
+                    }
+             ]
+        }
+        if idx > 2: #if we are searching for NON-MATCHING THINGS
+            filters = {
+                "operator": "NOT",
+                "conditions": [
+                    {
+                        "field": "meta.cve_id",
+                        "operator": "in",
+                        "value": [cve_id],
+                    }
+                ]
+            }
+
+        if idx == 0:
+            answers = self.cbc_embed_retriever.run(
+                query_embedding=query,
+                filters = filters,
+                top_k=top_k
+            )
+        elif idx == 1:
+            answers = self.func_embed_retriever.run(
+                query_embedding=query,
+                filters = filters,
+                top_k=top_k
+            )
+        elif idx == 2:
+            answers = self.purp_embed_retriever.run(
+                query_embedding=query,
+                filters = filters,
+                top_k=top_k
+            )
+        elif idx == 3:
+            answers = self.cbc_embed_retriever.run(
+                query_embedding=query,
+                filters = filters,
+                top_k=top_k
+            )
+        elif idx == 4:
+            answers = self.func_embed_retriever.run(
+                query_embedding=query,
+                filters = filters,
+                top_k=top_k
+            )
+        elif idx == 5:
+            answers = self.purp_embed_retriever.run(
+                query_embedding=query,
+                filters = filters,
+                top_k=top_k
+            )        
+        
+        return format(answers)
+
+    def search_cve(self, query, idx, cve_id, top_k=10):
+        #Searches for results with a matching cve
+        filters = {
+            "operator": "AND",
+            "conditions": [
+                    {
+                        "field": "meta.cve_id",
+                        "operator": "in",
+                        "value": [cve_id],
+                    }
+             ]
+        }
+        if idx > 2: #if we are searching for NON-MATCHING THINGS
+            filters = {
+                "operator": "NOT",
+                "conditions": [
+                    {
+                        "field": "meta.cve_id",
+                        "operator": "in",
+                        "value": [cve_id],
+                    }
+                ]
+            }
+
+        if idx == 0:
+            answers = self.cbc_retriever.run(
+                query=query,
+                filters = filters,
+                top_k=top_k
+            )
+        elif idx == 1:
+            answers = self.func_retriever.run(
+                query=query,
+                filters = filters,
+                top_k=top_k
+            )
+        elif idx == 2:
+            answers = self.purp_retriever.run(
+                query=query,
+                filters = filters,
+                top_k=top_k
+            )
+        elif idx == 3:
+            answers = self.cbc_retriever.run(
+                query=query,
+                filters = filters,
+                top_k=top_k
+            )
+        elif idx == 4:
+            answers = self.func_retriever.run(
+                query=query,
+                filters = filters,
+                top_k=top_k
+            )
+        elif idx == 5:
+            answers = self.purp_retriever.run(
+                query=query,
+                filters = filters,
+                top_k=top_k
+            )
+        print("Search CVE output", answers)
+        return format(answers)
 
     def search(self, query, retrieve_top_k = 10):
         """
@@ -159,13 +416,13 @@ class LLM4DetectionRetrieval(ESRetrieval):
         return knowledge_documents
 
 
-    def update_new_documents(self, doc_path, documents = None):
+    def update_new_documents(self, doc_path, cwe_name, document_name, documents = None):
         if not documents:
             documents = self.load_knowledge_documents(knowledge_file = doc_path)
         if not documents:
             logging.info(f'No documents to update')
             return
-        self.write_document(documents)
+        self.write_document(documents, cwe_name=cwe_name, document_name=document_name)
 
 
 def test_es_retrieval():
@@ -180,6 +437,7 @@ def test_es_retrieval():
     )
     answer = es_retrieval.search(query = query)
     print(answer)
+
 
 if __name__ == '__main__':
     test_es_retrieval()

@@ -10,6 +10,11 @@ from common import common_prompt
 import pdb
 import logging
 import json
+import openai
+import tiktoken
+from elasticsearch import Elasticsearch
+from .learned_reranker import LearnedReranker
+import numpy as np
 
 class VulRAGDetector:
     def __init__(
@@ -59,6 +64,95 @@ class VulRAGDetector:
 
         return final_result
 
+    def format_embed_answer(self, purpose_bm25, function_bm25, code_bm25, purpose_embed, function_embed, code_embed):
+        #This function will handle the formatting of the code in a similiar way to the original format_retrieved_answer, but will call a different rerank function
+        purpose_list = []
+        purpose_dict = {}
+        function_list = []
+        function_dict = {}
+        code_list = []
+        code_dict = {}
+        purpose_E_list = []
+        purpose_E_dict = {}
+        function_E_list = []
+        function_E_dict = {}
+        code_E_list = []
+        code_E_dict = {}
+
+        for item in purpose_bm25:
+            purpose_list.append(item["cve_id"])
+            purpose_dict[item["cve_id"]] = {"content": item["content"], "score": item.get("score",0) } #add score to the dictionary
+        for item in function_bm25:
+            function_list.append(item["cve_id"])
+            function_dict[item["cve_id"]] = {"content": item["content"], "score": item.get("score",0) }
+        for item in code_bm25:
+            code_list.append(item["cve_id"])
+            code_dict[item["cve_id"]] = {"content": item["content"], "score": item.get("score",0) }
+        for item in purpose_embed:
+            purpose_E_list.append(item["cve_id"])
+            purpose_E_dict[item["cve_id"]] = {"content": item["content"], "score": item.get("score",0) }
+        for item in function_embed:
+            function_E_list.append(item["cve_id"])
+            function_E_dict[item["cve_id"]] = {"content": item["content"], "score": item.get("score",0) }
+        for item in code_embed:
+            code_E_list.append(item["cve_id"])
+            code_E_dict[item["cve_id"]] = {"content": item["content"], "score": item.get("score",0) }
+
+        reranker = LearnedReranker("model.txt")
+
+        cve_id_list = function_list + purpose_list + code_list + purpose_E_list + function_E_list + code_E_list
+        cve_id_list = list(set(cve_id_list)) #deleted any duplicates
+
+        indexed_data = {}
+        for idx, cve in enumerate(cve_id_list):
+            input_vector = [
+                purpose_dict.get(cve, {}).get("score", 0),
+                function_dict.get(cve, {}).get("score", 0),
+                code_dict.get(cve, {}).get("score", 0),
+                purpose_E_dict.get(cve, {}).get("score", 0),
+                function_E_dict.get(cve, {}).get("score", 0),
+                code_E_dict.get(cve, {}).get("score", 0),
+            ]
+            indexed_data[idx] = {
+                "cve_id": cve,
+                "input_vector": input_vector,
+                "score": 0  # Placeholder for prediction score
+            }
+        
+        rerank_result = reranker.rerank(indexed_data)
+
+        knowledge_list = []
+
+        for item in rerank_result:
+            try:
+                cve_knowledge = self.vul_knowledge[item["cve_id"]]
+                for knowledge_item in cve_knowledge:
+                    if (item["cve_id"] in purpose_dict.keys() and 
+                        purpose_dict[item["cve_id"]] == knowledge_item[kdn.PURPOSE.value]) \
+                    or (item["cve_id"] in function_dict.keys() and 
+                        function_dict[item["cve_id"]] == knowledge_item[kdn.FUNCTION.value]) \
+                    or (item["cve_id"] in code_dict.keys() and 
+                        code_dict[item["cve_id"]] == knowledge_item[kdn.CODE_BEFORE.value]):
+
+                        knowledge_list.append({
+                            "cve_id": knowledge_item.get(kdn.CVE_ID.value), 
+                            "vulnerability_behavior": 
+                            {
+                                kdn.PRECONDITIONS.value: knowledge_item.get(kdn.PRECONDITIONS.value),
+                                kdn.TRIGGER.value: knowledge_item.get(kdn.TRIGGER.value), 
+                                kdn.CODE_BEHAVIOR.value: knowledge_item.get(kdn.CODE_BEHAVIOR.value)
+                            }, 
+                            "solution_behavior": knowledge_item.get(kdn.SOLUTION.value),
+                        })
+                        break
+
+            except Exception as e:
+                logging.error(f"Error: {e}")
+                logging.error(f"Error cve_id: {item['cve_id']}")
+        
+        return knowledge_list
+
+
     def format_retrieved_answer(self, purpose_answer, function_answer, code_answer):
         '''
         format the retrieval answer
@@ -83,9 +177,10 @@ class VulRAGDetector:
         for item in code_answer:
             code_list.append(item["cve_id"])
             code_dict[item["cve_id"]] = item["content"]
-
+        #This line cuts the list from potentially 30 down to 10
         rerank_result = self.rerank_by_rank(purpose_list, function_list, code_list)
 
+        #enriches these 10 lines with all the total data
         knowledge_list = []
         for item in rerank_result:
             try:
@@ -115,9 +210,42 @@ class VulRAGDetector:
                 logging.error(f"Error cve_id: {item['cve_id']}")
 
         return knowledge_list
+    
+    def truncate_to_limit(self, text, max_tokens=8192, model="text-embedding-3-small"):
+        encoding = tiktoken.encoding_for_model(model)
+        tokens = encoding.encode(text)
+        truncated = tokens[:max_tokens]
+        return encoding.decode(truncated)
+    
+    def embedder(self, query):
+        openai.api_key = cfg.openkey_openai_api_key
+        truncated = self.truncate_to_limit(query)
+        try:    
+            response = openai.embeddings.create( 
+                input= truncated,
+                model="text-embedding-3-small"
+            )
+        except Exception as e:
+            print(f"Failed to embed document: {e}")
+        
+        embedding = response.data[0].embedding
+        return embedding
+    
+    def format_embeddings(self, embed):
+        formatted_answer_list = []
+        for answer in embed["hits"]["hits"]:
+            formatted_answer_list.append({
+                "content": answer["_source"].get("content", ""),
+                "cve_id": answer["_source"].get("cve_id", "N/A"),
+                "score": answer.get("_score", 0)
+            })
+        return formatted_answer_list
 
     def retrieve_knowledge(self, cwe_name, code_snippet, purpose, function, top_N):
         logging.disable(logging.INFO)
+        #declare elasticsearch item for the embedding search
+        es = Elasticsearch([{"host": "localhost", "port": 9201}])
+
         purpose_query = purpose
         es_retrieval = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
             lower_cwe_id = cwe_name.lower(), 
@@ -125,12 +253,44 @@ class VulRAGDetector:
         ), kdn.PURPOSE.value.lower())
         purpose_answer = es_retrieval.search(query = purpose_query, retrieve_top_k = top_N)
 
+        #create embedding for purpose_answer
+        purpose_embed = self.embedder(purpose_query)
+        query_body = {
+            "size": top_N,
+            "query": {
+                "knn": {
+                    "embedding": {
+                        "vector": purpose_embed,
+                        "k": top_N
+                    }
+                }
+            }
+        }
+        purpose_embed = es.search(es_retrieval.index, body=query_body)
+        purpose_emb_answer = self.format_embeddings(purpose_embed)
+
         function_query = function
         es_retrieval = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
             lower_cwe_id = cwe_name.lower(), 
             lower_document_name = kdn.FUNCTION.value.lower()
         ), kdn.FUNCTION.value.lower())
         function_answer = es_retrieval.search(query = function_query, retrieve_top_k = top_N)
+
+        #create embedding for function_answer
+        function_embed = self.embedder(function_query)
+        query_body = {
+            "size": top_N,
+            "query": {
+                "knn": {
+                    "embedding": {
+                        "vector": function_embed,
+                        "k": top_N
+                    }
+                }
+            }
+        }
+        function_embed = es.search(es_retrieval.index, body=query_body)
+        function_emb_answer = self.format_embeddings(function_embed)
 
         function_query = code_snippet
         es_retrieval = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
@@ -142,10 +302,27 @@ class VulRAGDetector:
         except:
             code_answer = es_retrieval.search(query = function_query[:cfg.ES_SEARCH_MAX_TOKEN_LENGTH], retrieve_top_k = top_N)
 
+        #create embedding for code_answer
+        code_embed = self.embedder(function_query)
+        query_body = {
+            "size": top_N,
+            "query": {
+                "knn": {
+                    "embedding": {
+                        "vector": code_embed,
+                        "k": top_N
+                    }
+                }
+            }
+        }
+        code_embed = es.search(es_retrieval.index, body=query_body)
+        code_emb_answer = self.format_embeddings(code_embed)
+
+
         # enable logging info
         logging.disable(logging.NOTSET)
 
-        return self.format_retrieved_answer(purpose_answer, function_answer, code_answer)
+        return self.format_embed_answer(purpose_answer, function_answer, code_answer, purpose_emb_answer, function_emb_answer, code_emb_answer)
 
     def format_retrieved_answer_by_code(self, code_before_answer, code_after_answer):
         assert len(code_before_answer) == len(code_after_answer)
@@ -387,4 +564,116 @@ class VulRAGDetector:
             "Counter": lib_counter
         }
 
+    def training_pipeline(self, code_snippet, state, cwe_name, top_N, **kwargs):
+        
+        #generate purpose, function based on prompt
+        sample_id = kwargs.get('sample_id')
+        model_settings_dict = kwargs.get('model_settings_dict', {})
+        query_cve = kwargs.get('cve_id')
+        no_explanation = kwargs.get('no_explanation', False)
 
+        # get purpose and function
+        purpose_prompt, function_prompt = common_prompt.ExtractionPrompt.generate_extraction_prompt_for_vulrag(code_snippet)
+        purpose_messages = self.summary_model_instance.get_messages(purpose_prompt, constant.DEFAULT_SYS_PROMPT)
+        function_messages = self.summary_model_instance.get_messages(function_prompt, constant.DEFAULT_SYS_PROMPT)
+        purpose = common_util.extract_LLM_response_by_prefix(
+            self.summary_model_instance.get_response_with_messages(
+                purpose_messages,
+                **model_settings_dict
+            ),
+            constant.LLMResponseSeparator.FUN_PURPOSE_SEP.value
+        )
+        function = common_util.extract_LLM_response_by_prefix(
+            self.summary_model_instance.get_response_with_messages(
+                function_messages,
+                **model_settings_dict
+            ),
+            constant.LLMResponseSeparator.FUN_FUNCTION_SEP.value
+        )
+        
+
+        #Perform BM25 search for matching CVEs (for purpose, function, and code)
+        es_retrieval = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
+            lower_cwe_id = cwe_name.lower(), 
+            lower_document_name = kdn.PURPOSE.value.lower()
+        ), kdn.PURPOSE.value.lower())
+        
+        print("This is whats being passed from", query_cve, purpose)
+        #search with bm25 and then embeddings
+        purpose_answer = es_retrieval.search_cve(query = purpose, idx = 2, cve_id=query_cve)
+        #if the dictionary is empty we will be unable to use this example and move on
+        if not purpose_answer:
+            return
+        purpose_embed = self.embedder(purpose)
+        purpose_embed_answer = es_retrieval.search_embed_cve(query = purpose_embed, idx = 2, cve_id=query_cve)
+
+        #function_answer = es_retrieval.search_cve()
+        function_answer = es_retrieval.search_cve(query = purpose, idx = 1, cve_id=query_cve)        
+        function_embed = self.embedder(function)
+        function_embed_answer = es_retrieval.search_embed_cve(query = function_embed, idx = 1, cve_id=query_cve)        
+
+        #code_answer = es_retrieval.search_cve()
+        code_answer = es_retrieval.search_cve(query = code_snippet, idx = 0, cve_id=query_cve)   
+        print("code snippet:", code_answer)
+        code_embed = self.embedder(code_snippet)
+        code_embed_answer = es_retrieval.search_embed_cve(query = code_embed, idx = 0, cve_id=query_cve)
+
+        
+        #iterate through results while combining into a list        
+        data = {}
+        raw = {}
+        print(type(code_answer))
+        print(code_answer)
+        raw.update(code_answer)
+        raw.update(code_embed_answer)
+        raw.update(function_answer)
+        raw.update(function_embed_answer)
+        raw.update(purpose_answer)
+        raw.update(purpose_embed_answer)
+        
+        print(str(len(raw)) + " <- should be a multiple of 6")
+        print(type(raw))
+        print(type(code_answer))
+        for item in raw:
+            print(type(item))
+            data[item["id"]].append(item["score"])
+
+        label = 1
+        final_data = [[scores, label] for scores in data.values() if len(scores) == 6]        
+        data.append({"scores": [], "label": []})
+
+        #re-search for results that are similiar, but not accurate to mark as inaccurate results
+        #search with bm25 and then embeddings
+        purpose_answer = es_retrieval.search_cve(query = purpose, idx = 5, cve_id=query_cve)
+        #if the dictionary is empty we will be unable to use this example and move on
+        if not purpose_answer:
+            return
+        purpose_embed = self.embedder(purpose)
+        purpose_embed_answer = es_retrieval.search_embed_cve(query = purpose_embed, idx = 5, cve_id=query_cve)
+
+        #function_answer = es_retrieval.search_cve()
+        function_answer = es_retrieval.search_cve(query = purpose, idx = 4, cve_id=query_cve)        
+        function_embed = self.embedder(function)
+        function_embed_answer = es_retrieval.search_embed_cve(query = function_embed, idx = 4, cve_id=query_cve)        
+
+        #code_answer = es_retrieval.search_cve()
+        code_answer = es_retrieval.search_cve(query = code_snippet, idx = 3, cve_id=query_cve)   
+        code_embed = self.embedder(code_snippet)
+        code_embed_answer = es_retrieval.search_embed_cve(query = code_embed, idx = 3, cve_id=query_cve)
+
+        data = []
+        raw = []
+
+        raw.extend(code_answer + code_embed_answer + function_answer + function_embed_answer + purpose_answer + purpose_embed_answer)
+        print(len(raw) + " <- should be a multiple of 6")
+
+        for item in raw:
+            data[item["id"]].append(item["score"])
+
+        label = 0
+        final_wrong_data = [[scores, label] for scores in data.values() if len(scores) == 6] 
+
+        final_data.extend(final_wrong_data)
+        
+        print(final_data)
+        return final_data

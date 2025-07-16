@@ -100,7 +100,7 @@ and make sure to start elasticsearch
 
 
 
-FAILED CVE ENTRIES:
+FAILED CVE ENTRIES: (Trainging)
 
 CWE-119: 
     CVE-2016-3134: Expecting ':' delimiter
@@ -117,6 +117,11 @@ CWE-476:
 CWE-787:
     
    
+FAILED CVE ENTRIES (model_training):
+
+CWE-119 
+
+
 
 ElasticSearch Error: 
     How to start elasticsearch: cd C:\elasticsearch-9.0.2-windows-x86_64\elasticsearch-9.0.2\bin 

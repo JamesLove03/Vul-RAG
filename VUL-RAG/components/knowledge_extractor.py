@@ -167,6 +167,7 @@ class KnowledgeExtractor:
                 ), 
                 "json"
             )
+            #this line has document_name as in get_es_document_values
             for document_name in constant.KnowledgeDocumentName.get_es_document_values():
                 es_retrieval = LLM4DetectionRetrieval(
                     constant.ES_INDEX_NAME_TEMPLATE.format(
@@ -175,4 +176,4 @@ class KnowledgeExtractor:
                     ),
                     document_name
                 )
-                es_retrieval.update_new_documents(doc_path = doc_path)
+                es_retrieval.update_new_documents(doc_path = doc_path, cwe_name=cwe_name, document_name=document_name)
