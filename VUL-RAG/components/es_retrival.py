@@ -20,6 +20,7 @@ import openai
 from haystack import Document
 import common.constant as constant
 import uuid
+logging.basicConfig(level=logging.DEBUG)
 
 
 
@@ -49,41 +50,49 @@ class ESRetrieval:
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
+            timeout=60,
         )
         self.ds_code_before_change: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
+            timeout=60,
         )
         self.ds_gpt_function: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
+            timeout=60,
         )
         self.ds_gpt_purpose: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
+            timeout=60,
         )
         self.ds_solution: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
+            timeout=60,
         )
         self.ds_specific_code_behavior_causing_vulnerability: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
+            timeout=60,
         )
         self.ds_trigger_condition: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
+            timeout=60,
         )
         self.ds_preconditions_for_vulnerability: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
+            timeout=60,
         )
         self.cbc_retriever: ElasticsearchRetriever = ElasticsearchRetriever(
             document_store = self.ds_code_before_change
@@ -141,7 +150,6 @@ class ESRetrieval:
                         lower_cwe_id = cwe_name.lower(), 
                         lower_document_name = document_name.lower()
                     )
-            print(self.index + "\n")
 
             keywords = ["gpt_purpose", "code_before_change", "gpt_function"]
             
@@ -150,7 +158,8 @@ class ESRetrieval:
 
             for doc in documents:
                 if "id" not in doc or not doc["id"]:
-                    doc["id"] = str(uuid.uuid4())
+                    doc["id"] = str(doc["true_id"])
+
             documents = [Document(**doc) for doc in documents]
 
             start_time = time.time()
@@ -232,104 +241,128 @@ class ESRetrieval:
         return formatted_answer_list
     
     def format(self, answers):
+        
         formatted_answer_dict = {}
-        for answer in answers:
+        for answer in answers["documents"]:
             formatted_answer_dict[answer.id] = {
-                "content": answer.content,
                 "cve_id": answer.meta["cve_id"],
                 "score": answer.score,
                 "id": answer.id
             }
-        print("format output", formatted_answer_dict)
         return formatted_answer_dict
 
-    def search_embed_cve(self, query, idx, cve_id, top_k=10):
+    def search_embed_cve(self, query, idx, filteridx, cve_id, top_k=10):
 #Searches for results with a matching cve
-        filters = {
+        logging.disable(logging.CRITICAL)
+
+        if filteridx == 0: #Search for specific CVE-ID for training
+            filters = {
             "operator": "AND",
             "conditions": [
                     {
-                        "field": "meta.cve_id",
+                        "field": "cve_id",
                         "operator": "in",
                         "value": [cve_id],
                     }
-             ]
-        }
-        if idx > 2: #if we are searching for NON-MATCHING THINGS
+                ]
+            }   
+        elif filteridx == 1: #Search for specifically NOT a CVE-ID for training
             filters = {
                 "operator": "NOT",
                 "conditions": [
                     {
-                        "field": "meta.cve_id",
+                        "field": "cve_id",
                         "operator": "in",
                         "value": [cve_id],
                     }
                 ]
             }
-
-        if idx == 0:
-            answers = self.cbc_embed_retriever.run(
-                query_embedding=query,
-                filters = filters,
-                top_k=top_k
-            )
-        elif idx == 1:
-            answers = self.func_embed_retriever.run(
-                query_embedding=query,
-                filters = filters,
-                top_k=top_k
-            )
-        elif idx == 2:
-            answers = self.purp_embed_retriever.run(
-                query_embedding=query,
-                filters = filters,
-                top_k=top_k
-            )
-        elif idx == 3:
-            answers = self.cbc_embed_retriever.run(
-                query_embedding=query,
-                filters = filters,
-                top_k=top_k
-            )
-        elif idx == 4:
-            answers = self.func_embed_retriever.run(
-                query_embedding=query,
-                filters = filters,
-                top_k=top_k
-            )
-        elif idx == 5:
-            answers = self.purp_embed_retriever.run(
-                query_embedding=query,
-                filters = filters,
-                top_k=top_k
-            )        
+            top_k = 1
+        elif filteridx == 2: #General search for detection
+            filters = {}
+        elif filteridx == 3: #Search for a specific ID for filling in blanks
+            filters = {
+            "operator": "AND",
+            "conditions": [
+                    {
+                        "field": "id",
+                        "operator": "in",
+                        "value": [cve_id],
+                    }
+                ]
+            }
+        else:
+            print("Invalid filteridx")
         
-        return format(answers)
+        if idx == 0:
+            answers = self.cbc_embed_retriever.run(
+                query_embedding=query,
+                filters = filters,
+                top_k=top_k
+            )
+        elif idx == 1:
+            answers = self.func_embed_retriever.run(
+                query_embedding=query,
+                filters = filters,
+                top_k=top_k
+            )
+        elif idx == 2:
+            answers = self.purp_embed_retriever.run(
+                query_embedding=query,
+                filters = filters,
+                top_k=top_k
+            )     
 
-    def search_cve(self, query, idx, cve_id, top_k=10):
+        if answers is None or len(answers["documents"]) == 0:
+            return None  
+        
+        return self.format(answers)
+
+    def search_cve(self, query, idx, filteridx, cve_id, top_k=10):
         #Searches for results with a matching cve
-        filters = {
+        logging.disable(logging.CRITICAL)
+
+        if filteridx == 0: #Search for specific CVE-ID for training
+            filters = {
             "operator": "AND",
             "conditions": [
                     {
-                        "field": "meta.cve_id",
+                        "field": "cve_id",
                         "operator": "in",
                         "value": [cve_id],
                     }
-             ]
-        }
-        if idx > 2: #if we are searching for NON-MATCHING THINGS
+                ]
+            }   
+        elif filteridx == 1: #Search for specifically NOT a CVE-ID for training
             filters = {
                 "operator": "NOT",
                 "conditions": [
                     {
-                        "field": "meta.cve_id",
+                        "field": "cve_id",
                         "operator": "in",
                         "value": [cve_id],
                     }
                 ]
             }
-
+            top_k = 1
+        elif filteridx == 2: #General search for detection
+            filters = {}
+        elif filteridx == 3: #Search for a specific ID for filling in blanks
+            filters = {
+            "operator": "AND",
+            "conditions": [
+                    {
+                        "field": "id",
+                        "operator": "in",
+                        "value": [cve_id],
+                    }
+                ]
+            }
+        else:
+            print("Invalid filteridx")
+        
+        
+            
         if idx == 0:
             answers = self.cbc_retriever.run(
                 query=query,
@@ -348,26 +381,12 @@ class ESRetrieval:
                 filters = filters,
                 top_k=top_k
             )
-        elif idx == 3:
-            answers = self.cbc_retriever.run(
-                query=query,
-                filters = filters,
-                top_k=top_k
-            )
-        elif idx == 4:
-            answers = self.func_retriever.run(
-                query=query,
-                filters = filters,
-                top_k=top_k
-            )
-        elif idx == 5:
-            answers = self.purp_retriever.run(
-                query=query,
-                filters = filters,
-                top_k=top_k
-            )
-        print("Search CVE output", answers)
-        return format(answers)
+    
+        #check for nonexistant matches (ie in test set and not training set)
+        if answers is None or len(answers["documents"]) == 0:
+            return None
+
+        return self.format(answers)
 
     def search(self, query, retrieve_top_k = 10):
         """
@@ -406,6 +425,7 @@ class LLM4DetectionRetrieval(ESRetrieval):
             for vul_knowledge_item in knowledge_list:
                 try:
                     knowledge_documents.append({
+                        "id": str(vul_knowledge_item["true_id"]),
                         "content": vul_knowledge_item[self.document_name],
                         "meta": {
                             "cve_id": vul_knowledge_item['CVE_id']
@@ -425,19 +445,22 @@ class LLM4DetectionRetrieval(ESRetrieval):
         self.write_document(documents, cwe_name=cwe_name, document_name=document_name)
 
 
-def test_es_retrieval():
-    example_batch_name = "gpt-3.5-turbo_CWE-119_316_pattern_all"
-    document_name = "solution"
-    doc_path = PathUtil.knowledge_extraction_output(example_batch_name, "json")
-    es_retrieval = LLM4DetectionRetrieval(example_batch_name.lower() + "_" + document_name.lower(), document_name)
-    es_retrieval.update_new_documents(doc_path = doc_path)
-    query = (
-        "When removing a device, there may still be work items related to the device "
-        "that are either executing or queued for execution."
-    )
-    answer = es_retrieval.search(query = query)
-    print(answer)
+def test_es_retrieval(self):
 
+    self.cbc_retriever.run() 
+
+    filters = {
+            "operator": "AND",
+            "conditions": [
+                    {
+                        "field": "cve_id",
+                        "operator": "in",
+                        "value": [cve_id],
+                    }
+             ]
+        }
+    
+    
 
 if __name__ == '__main__':
     test_es_retrieval()

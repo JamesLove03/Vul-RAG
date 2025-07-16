@@ -299,9 +299,9 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
                         elif non_vul['lib_decision'] == 0:
                             cfs_mat[mk.WLE.value] += 1
 
-                cfs_mat[mk.SPC.value] += vul["Counter"]
+                cfs_mat[mk.SPC.value] += non_vul["Counter"]
                 
-                if vul["lib_present"] == 1:
+                if non_vul["lib_present"] == 1:
                     cfs_mat[mk.PLE.value] += 1
                         
             except Exception as e:

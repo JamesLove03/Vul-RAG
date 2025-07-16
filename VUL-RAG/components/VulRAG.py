@@ -15,6 +15,8 @@ import tiktoken
 from elasticsearch import Elasticsearch
 from .learned_reranker import LearnedReranker
 import numpy as np
+import lightgbm as lgb
+import os
 
 class VulRAGDetector:
     def __init__(
@@ -218,6 +220,8 @@ class VulRAGDetector:
         return encoding.decode(truncated)
     
     def embedder(self, query):
+        logging.disable(logging.CRITICAL)
+
         openai.api_key = cfg.openkey_openai_api_key
         truncated = self.truncate_to_limit(query)
         try:    
@@ -335,6 +339,59 @@ class VulRAGDetector:
             )
         return code_list
 
+    def learned_reranker(self, input_dict):
+        #create a np.array of the vectors and also create a second array that holds the keys
+        ordered_keys = list(input_dict.keys())
+        scores_array = np.array([input_dict[key]["scores"] for key in input_dict])
+        #iterate through the 5 different models
+        current_dir = os.path.dirname(__file__)
+
+        models = []
+        for fold_idx in range(1,6):
+            model_path = os.path.join(current_dir, f"model_fold_{fold_idx}.txt")
+            assert os.path.exists(model_path), f"Model file not found: {model_path}"
+            model = lgb.Booster(model_file=model_path)
+            models.append(model)
+        #call predict on the np.array
+        all_scores = [model.predict(scores_array) for model in models]
+        avg_scores = np.mean(all_scores, axis=0)
+        #iterate through the returned list and find the 10 highest values after taking the average
+        key_score_pairs = list(zip(ordered_keys, avg_scores))
+        top_10_pairs = sorted(key_score_pairs, key=lambda x: x[1], reverse=True)[:10]
+        #after iterating through all 5 models choose the models with the 10 highest scores and place in dict
+        top_10_dict = {k: v for k, v in top_10_pairs}
+        
+        return top_10_dict
+
+    def final_format(self, response):
+
+        top_10 = self.learned_reranker(response)
+        #swap the id field in this top_10 variable with the cve_id that can be used to fill out info
+        true_id_list = [int(key) for key in top_10.keys()]
+                    
+        #fill in info to match the original return value of retrieve_knowledge()
+        knowledge_list = []
+        for tid in true_id_list:
+            found = False
+            for cve_id, entries in self.vul_knowledge.items():
+                for entry in entries:
+                    if entry.get("true_id") == tid:
+                        vul_behavior = entry.get(kdn.VUL_BEHAVIOR.value, {})
+                        knowledge_list.append({
+                            "cve_id": entry.get(kdn.CVE_ID.value),
+                            "vulnerability_behavior": {
+                                kdn.PRECONDITIONS.value: vul_behavior.get(kdn.PRECONDITIONS.value),
+                                kdn.TRIGGER.value: vul_behavior.get(kdn.TRIGGER.value),
+                                kdn.CODE_BEHAVIOR.value: vul_behavior.get(kdn.CODE_BEHAVIOR.value)
+                            },
+                            "solution_behavior": entry.get(kdn.SOLUTION.value),
+                        })
+                        found = True
+                        break
+                if found:
+                    break
+        return knowledge_list        
+
     def retrieve_similar_code(self, cwe_name, code_snippet, top_N):
         function_query = code_snippet
         es_retrieval = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
@@ -362,7 +419,105 @@ class VulRAGDetector:
             )
         return self.format_retrieved_answer_by_code(code_before_change_answer, code_after_change_answer)
 
-       
+    def fill_blanks(self, purpose_ds, function_ds, code_ds, dicts, queries):
+        
+        all_keys = set()
+        combined = {}
+        for d in dicts:
+            all_keys.update(d.keys())
+        for key in all_keys:
+            scores = []
+            for i, d in enumerate(dicts):
+                if key not in d:
+                    if i == 0: #code dict missing
+                        res = code_ds.search_cve(query = queries[i], idx = 0, filteridx = 3, cve_id = key)
+                        if res is not None and key in res and res[key] is not None:
+                            d[key] = res[key]
+                        else:
+                            d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
+                            print("Empty code on: ", key)
+                    elif i == 1: #code embed dict missing
+                        res = code_ds.search_embed_cve(query = queries[i], idx = 0, filteridx = 3, cve_id = key)
+                        if res is not None and key in res and res[key] is not None:
+                            d[key] = res[key]
+                        else:
+                            d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
+                            print("Empty code emb on: ", key)
+                    elif i == 2: #function dict missing
+                        res = function_ds.search_cve(query = queries[i], idx = 1, filteridx = 3, cve_id = key)
+                        if res is not None and key in res and res[key] is not None:
+                            d[key] = res[key]
+                        else:
+                            d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
+                            print("Empty function on: ", key)
+                    elif i == 3: #function embed dict missing
+                        res = function_ds.search_embed_cve(query = queries[i], idx = 1, filteridx = 3, cve_id = key)
+                        if res is not None and key in res and res[key] is not None:
+                            d[key] = res[key]
+                        else:
+                            d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
+                            print("Empty emb function on: ", key)
+                    elif i == 4: #purpose dict missing
+                        res = purpose_ds.search_cve(query = queries[i], idx = 2, filteridx = 3, cve_id = key)
+                        if res is not None and key in res and res[key] is not None:
+                            d[key] = res[key]
+                        else:
+                            d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
+                            print("Empty purpose on: ", key)
+                    elif i == 5: #purpose embed dict missing
+                        res = purpose_ds.search_embed_cve(query = queries[i], idx = 2, filteridx = 3, cve_id = key)
+                        if res is not None and key in res and res[key] is not None:
+                            d[key] = res[key]
+                        else:
+                            d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
+                            print("Empty emb purpose on: ", key)
+                    else:
+                        print("Passed too many dicts")
+                scores.append(d[key]["score"])
+            
+            combined[key] = {"scores": scores}
+
+        return combined
+
+    #def updated_retrieve(self, )
+
+    def retrieve_learned_knowledge(self, cwe_name, code_snippet, purpose, function, top_N=10):
+
+        #generate embeddings for passed queries
+        purpose_embed = self.embedder(purpose)
+        function_embed = self.embedder(function)
+        code_embed = self.embedder(code_snippet)
+
+        #generate the three es_retrieval items
+        es_purpose = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
+            lower_cwe_id = cwe_name.lower(), 
+            lower_document_name = kdn.PURPOSE.value.lower()
+        ), kdn.PURPOSE.value.lower())
+        es_function = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
+            lower_cwe_id = cwe_name.lower(), 
+            lower_document_name = kdn.FUNCTION.value.lower()
+        ), kdn.FUNCTION.value.lower())
+        es_code = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
+            lower_cwe_id = cwe_name.lower(), 
+            lower_document_name = kdn.CODE_BEFORE.value.lower()
+        ), kdn.CODE_BEFORE.value.lower())
+        #search bm25 results
+        purpose_answer = es_purpose.search_cve(query = purpose, idx = 2, filteridx = 2, cve_id=1)
+        function_answer = es_function.search_cve(query = function, idx = 1, filteridx = 2, cve_id=1)        
+        code_answer = es_code.search_cve(query = code_snippet, idx = 0, filteridx = 2, cve_id=1)   
+
+        #search emb results
+        purpose_embed_answer = es_purpose.search_embed_cve(query = purpose_embed, idx = 2, filteridx = 2, cve_id=1)
+        function_embed_answer = es_function.search_embed_cve(query = function_embed, idx = 1, filteridx = 2, cve_id=1)        
+        code_embed_answer = es_code.search_embed_cve(query = code_embed, idx = 0, filteridx = 2, cve_id=1)
+        #call fill_blanks
+        dicts = [code_answer, code_embed_answer, function_answer, function_embed_answer, purpose_answer, purpose_embed_answer]
+        queries = [code_snippet, code_embed, function, function_embed, purpose, purpose_embed]
+        
+        response = self.fill_blanks(es_purpose, es_function, es_code, dicts, queries)  
+        #return the formatted list
+        return self.final_format(response)
+
     def detect_pipeline_retrival_by_code(self, code_snippet, cwe_name, top_N, **kwargs):
         sample_id = kwargs.get('sample_id')
         model_settings_dict = kwargs.get('model_settings_dict', {})
@@ -467,11 +622,10 @@ class VulRAGDetector:
             constant.LLMResponseSeparator.FUN_FUNCTION_SEP.value
         )
 
-
+        print("calling retrieve learned knowledge")
         # retrieve knowledge
-        vul_knowledge_list = self.retrieve_knowledge(cwe_name, code_snippet, purpose, function, top_N)
+        vul_knowledge_list = self.retrieve_learned_knowledge(cwe_name, code_snippet, purpose, function, top_N)
         # logging.info("len(vul_knowledge_list): %d", len(vul_knowledge_list))
-
         # detect vulnerability with the ranking knowledge list, 
         # if Yes/No is detected, return the result, 
         # else, continue to detect the next knowledge
@@ -481,6 +635,7 @@ class VulRAGDetector:
         lib_counter = 0
         lib = 0
         dec = 0
+        print("returned with my knowledge")
         for vul_knowledge in vul_knowledge_list[:min(cfg.MAX_RETRIEVE_KNOWLEDGE_NUM, len(vul_knowledge_list))]:
             counter += 1
             if no_explanation:
@@ -565,7 +720,7 @@ class VulRAGDetector:
         }
 
     def training_pipeline(self, code_snippet, state, cwe_name, top_N, **kwargs):
-        
+        final_data = []
         #generate purpose, function based on prompt
         sample_id = kwargs.get('sample_id')
         model_settings_dict = kwargs.get('model_settings_dict', {})
@@ -591,89 +746,81 @@ class VulRAGDetector:
             constant.LLMResponseSeparator.FUN_FUNCTION_SEP.value
         )
         
-
-        #Perform BM25 search for matching CVEs (for purpose, function, and code)
-        es_retrieval = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
+        #Create the es items that will be used to access all of our retrievers
+        es_purpose = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
             lower_cwe_id = cwe_name.lower(), 
             lower_document_name = kdn.PURPOSE.value.lower()
         ), kdn.PURPOSE.value.lower())
-        
-        print("This is whats being passed from", query_cve, purpose)
-        #search with bm25 and then embeddings
-        purpose_answer = es_retrieval.search_cve(query = purpose, idx = 2, cve_id=query_cve)
-        #if the dictionary is empty we will be unable to use this example and move on
+
+        es_function = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
+            lower_cwe_id = cwe_name.lower(), 
+            lower_document_name = kdn.FUNCTION.value.lower()
+        ), kdn.FUNCTION.value.lower())
+
+        es_code = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
+            lower_cwe_id = cwe_name.lower(), 
+            lower_document_name = kdn.CODE_BEFORE.value.lower()
+        ), kdn.CODE_BEFORE.value.lower())
+
+        #Search for incorrect examples (label == 0, filteridx == 1)
+        purpose_answer = es_purpose.search_cve(query = purpose, idx = 2, filteridx = 1, cve_id=query_cve)
         if not purpose_answer:
+            print("Something went wrong purpose not found for non-matching")
             return
         purpose_embed = self.embedder(purpose)
-        purpose_embed_answer = es_retrieval.search_embed_cve(query = purpose_embed, idx = 2, cve_id=query_cve)
+        purpose_embed_answer = es_purpose.search_embed_cve(query = purpose_embed, idx = 2, filteridx = 1, cve_id=query_cve)
 
-        #function_answer = es_retrieval.search_cve()
-        function_answer = es_retrieval.search_cve(query = purpose, idx = 1, cve_id=query_cve)        
+        function_answer = es_function.search_cve(query = function, idx = 1, filteridx = 1, cve_id=query_cve)        
         function_embed = self.embedder(function)
-        function_embed_answer = es_retrieval.search_embed_cve(query = function_embed, idx = 1, cve_id=query_cve)        
+        function_embed_answer = es_function.search_embed_cve(query = function_embed, idx = 1, filteridx = 1, cve_id=query_cve)        
 
-        #code_answer = es_retrieval.search_cve()
-        code_answer = es_retrieval.search_cve(query = code_snippet, idx = 0, cve_id=query_cve)   
-        print("code snippet:", code_answer)
+        code_answer = es_code.search_cve(query = code_snippet, idx = 0, filteridx = 1, cve_id=query_cve)   
         code_embed = self.embedder(code_snippet)
-        code_embed_answer = es_retrieval.search_embed_cve(query = code_embed, idx = 0, cve_id=query_cve)
+        code_embed_answer = es_code.search_embed_cve(query = code_embed, idx = 0, filteridx = 1, cve_id=query_cve)
 
-        
-        #iterate through results while combining into a list        
-        data = {}
-        raw = {}
-        print(type(code_answer))
-        print(code_answer)
-        raw.update(code_answer)
-        raw.update(code_embed_answer)
-        raw.update(function_answer)
-        raw.update(function_embed_answer)
-        raw.update(purpose_answer)
-        raw.update(purpose_embed_answer)
-        
-        print(str(len(raw)) + " <- should be a multiple of 6")
-        print(type(raw))
-        print(type(code_answer))
-        for item in raw:
-            print(type(item))
-            data[item["id"]].append(item["score"])
+        #gather dicts of answers and queries to pass to response
+        dicts = [code_answer, code_embed_answer, function_answer, function_embed_answer, purpose_answer, purpose_embed_answer]
+        queries = [code_snippet, code_embed, function, function_embed, purpose, purpose_embed]
+        response = self.fill_blanks(es_purpose, es_function, es_code, dicts, queries)
 
-        label = 1
-        final_data = [[scores, label] for scores in data.values() if len(scores) == 6]        
-        data.append({"scores": [], "label": []})
-
-        #re-search for results that are similiar, but not accurate to mark as inaccurate results
-        #search with bm25 and then embeddings
-        purpose_answer = es_retrieval.search_cve(query = purpose, idx = 5, cve_id=query_cve)
-        #if the dictionary is empty we will be unable to use this example and move on
-        if not purpose_answer:
-            return
-        purpose_embed = self.embedder(purpose)
-        purpose_embed_answer = es_retrieval.search_embed_cve(query = purpose_embed, idx = 5, cve_id=query_cve)
-
-        #function_answer = es_retrieval.search_cve()
-        function_answer = es_retrieval.search_cve(query = purpose, idx = 4, cve_id=query_cve)        
-        function_embed = self.embedder(function)
-        function_embed_answer = es_retrieval.search_embed_cve(query = function_embed, idx = 4, cve_id=query_cve)        
-
-        #code_answer = es_retrieval.search_cve()
-        code_answer = es_retrieval.search_cve(query = code_snippet, idx = 3, cve_id=query_cve)   
-        code_embed = self.embedder(code_snippet)
-        code_embed_answer = es_retrieval.search_embed_cve(query = code_embed, idx = 3, cve_id=query_cve)
-
-        data = []
-        raw = []
-
-        raw.extend(code_answer + code_embed_answer + function_answer + function_embed_answer + purpose_answer + purpose_embed_answer)
-        print(len(raw) + " <- should be a multiple of 6")
-
-        for item in raw:
-            data[item["id"]].append(item["score"])
-
+        #load final data with response + label 1
         label = 0
-        final_wrong_data = [[scores, label] for scores in data.values() if len(scores) == 6] 
+        for key, entry in response.items():
+            final_data.append(({
+                "scores": entry["scores"],
+                "label": label,
+            }))
 
-        final_data.extend(final_wrong_data)
-        
-        print(final_data)
+        #SEARCH FOR MATCHES CVE NUMS (label == 1, filteridx == 0)
+        purpose_answer = es_purpose.search_cve(query = purpose, idx = 2, filteridx = 0, cve_id=query_cve)
+        #if the dictionary is empty we will be unable to use this example and return the incorrect answer
+        if not purpose_answer:
+            print(f"No positive example for {query_cve}")
+            print(f"Generated {len(final_data)} negative examples for {query_cve}")
+            return final_data
+        purpose_embed = self.embedder(purpose)
+        purpose_embed_answer = es_purpose.search_embed_cve(query = purpose_embed, idx = 2, filteridx = 0, cve_id=query_cve)
+
+        #function_answer = es_retrieval.search_cve()
+        function_answer = es_function.search_cve(query = function, idx = 1, filteridx = 0, cve_id=query_cve)        
+        function_embed = self.embedder(function)
+        function_embed_answer = es_function.search_embed_cve(query = function_embed, idx = 1, filteridx = 0, cve_id=query_cve)        
+
+        #code_answer = es_retrieval.search_cve()
+        code_answer = es_code.search_cve(query = code_snippet, idx = 0, filteridx = 0, cve_id=query_cve)   
+        code_embed = self.embedder(code_snippet)
+        code_embed_answer = es_code.search_embed_cve(query = code_embed, idx = 0, filteridx = 0, cve_id=query_cve)
+
+        dicts = [code_answer, code_embed_answer, function_answer, function_embed_answer, purpose_answer, purpose_embed_answer]
+        queries = [code_snippet, code_embed, function, function_embed, purpose, purpose_embed]
+        response = self.fill_blanks(es_purpose, es_function, es_code, dicts, queries)        
+        #load final data with label 1
+        label = 1
+        for key, entry in response.items():
+            final_data.append(({
+                "scores": entry["scores"],
+                "label": label,
+            }))
+
+        print(f"Generated {len(final_data)} positive/negative examples for {query_cve}")
         return final_data

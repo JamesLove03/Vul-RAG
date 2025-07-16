@@ -140,10 +140,11 @@ if __name__ == '__main__':
             else:
                 # to avoid overwriting the existing output file
                 raise FileNotFoundError(f"Checkpoint file {checkpoint_path} not found.")
-        
+        print("Check 1")
         try:
             for cve_item in tqdm(cve_list):
                 if cve_item['id'] in ckpt_cve_list:
+                    print("Checkpoint issue")
                     continue
                 if args.retrieve_by_code:
                     vul_detect_result = VulD.detect_pipeline_retrival_by_code(
@@ -163,6 +164,7 @@ if __name__ == '__main__':
                         cve_id = cve_item['cve_id']
                     )
                 else:
+                    print("calling detect pipeline")
                     vul_detect_result = VulD.detection_pipeline(
                         cve_item['code_before_change'],
                         "code_before_change",

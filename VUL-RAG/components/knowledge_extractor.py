@@ -146,6 +146,7 @@ class KnowledgeExtractor:
                 output_dict["code_before_change"] = item["code_before_change"]
                 output_dict["code_after_change"] = item["code_after_change"]
                 output_dict["modified_lines"] = item["function_modified_lines"]
+                output_dict["true_id"] = item["id"]
                 output_list[item["cve_id"]].append(output_dict)
                 #save progress to the dumpfile
                 with open("processed_ids.json", "w") as f:

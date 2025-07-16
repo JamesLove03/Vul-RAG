@@ -109,7 +109,8 @@ CWE-362:
     CVE-2012-3552: Expecting ':' delimiter
 
 CWE-416:
-    
+    -CVE-2021-3347: Expecting ':' delimiter
+    -CVE-2023-5197: Expecting ':' delimiter
 
 CWE-476:
     
@@ -120,8 +121,17 @@ CWE-787:
 FAILED CVE ENTRIES (model_training):
 
 CWE-119 
+    -CVE-2013-4514: too many tokens
 
+CWE-362
+    -CVE-2015-8839: Expecting value:
 
+CWE-416
+
+CWE-476
+    -CVE-2017-7374: Expecting ':' delimiter
+CWE-787:
+    -CVE-2017-13166: Expecting ':' delimiter
 
 ElasticSearch Error: 
     How to start elasticsearch: cd C:\elasticsearch-9.0.2-windows-x86_64\elasticsearch-9.0.2\bin 
