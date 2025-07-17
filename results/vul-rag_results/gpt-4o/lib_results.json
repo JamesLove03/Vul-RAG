@@ -5,7 +5,8 @@
         "Library_Wrong": 12,
         "Non_Lib_Correct": 28,
         "Non_Lib_Incorrect": 23,
-        "Total_Entries": 85
+        "Total_Entries": 85,
+        "Average_Rank": 1.0526315789473684
     },
     "CWE-362": {
         "Library_Presence": 102,
@@ -13,7 +14,8 @@
         "Library_Wrong": 31,
         "Non_Lib_Correct": 26,
         "Non_Lib_Incorrect": 34,
-        "Total_Entries": 162
+        "Total_Entries": 162,
+        "Average_Rank": 1.0196078431372548
     },
     "CWE-416": {
         "Library_Presence": 186,
@@ -21,7 +23,8 @@
         "Library_Wrong": 64,
         "Non_Lib_Correct": 76,
         "Non_Lib_Incorrect": 75,
-        "Total_Entries": 328
+        "Total_Entries": 328,
+        "Average_Rank": 1.0161290322580645
     },
     "CWE-476": {
         "Library_Presence": 57,
@@ -29,7 +32,8 @@
         "Library_Wrong": 24,
         "Non_Lib_Correct": 56,
         "Non_Lib_Incorrect": 29,
-        "Total_Entries": 142
+        "Total_Entries": 142,
+        "Average_Rank": 1.0
     },
     "CWE-787": {
         "Library_Presence": 46,
@@ -37,7 +41,8 @@
         "Library_Wrong": 20,
         "Non_Lib_Correct": 30,
         "Non_Lib_Incorrect": 18,
-        "Total_Entries": 94
+        "Total_Entries": 94,
+        "Average_Rank": 1.0
     },
     "Total": {
         "Library_Presence": 429,
@@ -45,6 +50,7 @@
         "Library_Wrong": 151,
         "Non_Lib_Correct": 216,
         "Non_Lib_Incorrect": 179,
-        "Total_Entries": 811
+        "Total_Entries": 811,
+        "Average_Rank": 1.0163170163170163
     }
 }

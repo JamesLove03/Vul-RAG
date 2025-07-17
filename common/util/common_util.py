@@ -238,6 +238,7 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
     total_correct_lib_dec_rate = 0
 
     for result_file in target_result_file_list:
+        print("loading from: ", result_file)
         results = DataUtils.load_json(result_file)
         cfs_mat = {
             mk.TN.value: 0,
@@ -315,26 +316,25 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
             })
 
         metrics_data = calculate_metrics(**cfs_mat, id_result_map = id_result_map)
-        
-        logging.info(f"Result File: {result_file}")
-        logging.info(f"{mk.TP.value}: {cfs_mat.get(mk.TP.value)}")
-        logging.info(f"{mk.TN.value}: {cfs_mat.get(mk.TN.value)}")
-        logging.info(f"{mk.FP.value}: {cfs_mat.get(mk.FP.value)}")
-        logging.info(f"{mk.FN.value}: {cfs_mat.get(mk.FN.value)}")
-        logging.info(f"{mk.FNR.value}: {metrics_data.get(mk.FNR.value)}")
-        logging.info(f"{mk.FPR.value}: {metrics_data.get(mk.FPR.value)}")
-        logging.info(f"{mk.PC.value}: {metrics_data.get(mk.PC.value)}")
-        logging.info(f"{mk.RC.value}: {metrics_data.get(mk.RC.value)}")
-        logging.info(f"{mk.F1.value}: {metrics_data.get(mk.F1.value)}")
-        logging.info(f"{mk.AC.value}: {metrics_data.get(mk.AC.value)}")
-        logging.info(f"{mk.VPC.value}: {metrics_data.get(mk.VPC.value)}")
-        logging.info(f"{mk.APC.value}: {metrics_data.get(mk.APC.value)}")
-        logging.info(f"{mk.PAC.value}: {metrics_data.get(mk.PAC.value)}")
-        logging.info(f"{mk.P1R.value}: {metrics_data.get(mk.P1R.value)}")
-        logging.info(f"{mk.P0R.value}: {metrics_data.get(mk.P0R.value)}")
-        logging.info(f"{mk.P1C.value}: {metrics_data.get(mk.P1C.value)}")
-        logging.info(f"{mk.P0C.value}: {metrics_data.get(mk.P0C.value)}")
-        logging.info(f"--------------------------------------------------")
+        # logging.info(f"Result File: {result_file}")
+        # logging.info(f"{mk.TP.value}: {cfs_mat.get(mk.TP.value)}")
+        # logging.info(f"{mk.TN.value}: {cfs_mat.get(mk.TN.value)}")
+        # logging.info(f"{mk.FP.value}: {cfs_mat.get(mk.FP.value)}")
+        # logging.info(f"{mk.FN.value}: {cfs_mat.get(mk.FN.value)}")
+        # logging.info(f"{mk.FNR.value}: {metrics_data.get(mk.FNR.value)}")
+        # logging.info(f"{mk.FPR.value}: {metrics_data.get(mk.FPR.value)}")
+        # logging.info(f"{mk.PC.value}: {metrics_data.get(mk.PC.value)}")
+        # logging.info(f"{mk.RC.value}: {metrics_data.get(mk.RC.value)}")
+        # logging.info(f"{mk.F1.value}: {metrics_data.get(mk.F1.value)}")
+        # logging.info(f"{mk.AC.value}: {metrics_data.get(mk.AC.value)}")
+        # logging.info(f"{mk.VPC.value}: {metrics_data.get(mk.VPC.value)}")
+        # logging.info(f"{mk.APC.value}: {metrics_data.get(mk.APC.value)}")
+        # logging.info(f"{mk.PAC.value}: {metrics_data.get(mk.PAC.value)}")
+        # logging.info(f"{mk.P1R.value}: {metrics_data.get(mk.P1R.value)}")
+        # logging.info(f"{mk.P0R.value}: {metrics_data.get(mk.P0R.value)}")
+        # logging.info(f"{mk.P1C.value}: {metrics_data.get(mk.P1C.value)}")
+        # logging.info(f"{mk.P0C.value}: {metrics_data.get(mk.P0C.value)}")
+        # logging.info(f"--------------------------------------------------")
 
         total_cfs_mat[mk.TN.value] += cfs_mat.get(mk.TN.value)
         total_cfs_mat[mk.TP.value] += cfs_mat.get(mk.TP.value)
@@ -365,6 +365,7 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
             result_file_name = os.path.join(os.path.dirname(result_file), result_file_name)
             DataUtils.save_json(result_file_name, metrics_data)
 
+    print("made it through all the individual files")
     if calculate_total_metrics_flag:
         total_metrics_data = calculate_metrics(**total_cfs_mat)
         total_pair_accuracy = total_accurate_pair_cnt / total_valid_pair_cnt if total_valid_pair_cnt > 0 else -1

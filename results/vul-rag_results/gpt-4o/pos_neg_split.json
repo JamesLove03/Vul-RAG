@@ -1,0 +1,26 @@
+{
+    "CWE-119": {
+        "final_result_1": 41,
+        "final_result_0": 44
+    },
+    "CWE-362": {
+        "final_result_1": 74,
+        "final_result_0": 88
+    },
+    "CWE-416": {
+        "final_result_1": 176,
+        "final_result_0": 152
+    },
+    "CWE-476": {
+        "final_result_1": 62,
+        "final_result_0": 80
+    },
+    "CWE-787": {
+        "final_result_1": 57,
+        "final_result_0": 37
+    },
+    "Total": {
+        "final_result_1": 410,
+        "final_result_0": 401
+    }
+}

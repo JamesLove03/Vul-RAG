@@ -1,0 +1,56 @@
+{
+    "CWE-119": {
+        "Library_Presence": 98,
+        "Library_Correct": 60,
+        "Library_Wrong": 32,
+        "Non_Lib_Correct": 12,
+        "Non_Lib_Incorrect": 8,
+        "Total_Entries": 112,
+        "Average_Rank": 1.1122448979591837
+    },
+    "CWE-362": {
+        "Library_Presence": 212,
+        "Library_Correct": 125,
+        "Library_Wrong": 66,
+        "Non_Lib_Correct": 21,
+        "Non_Lib_Incorrect": 22,
+        "Total_Entries": 234,
+        "Average_Rank": 1.3018867924528301
+    },
+    "CWE-416": {
+        "Library_Presence": 407,
+        "Library_Correct": 246,
+        "Library_Wrong": 121,
+        "Non_Lib_Correct": 52,
+        "Non_Lib_Incorrect": 49,
+        "Total_Entries": 468,
+        "Average_Rank": 1.1965601965601966
+    },
+    "CWE-476": {
+        "Library_Presence": 171,
+        "Library_Correct": 108,
+        "Library_Wrong": 45,
+        "Non_Lib_Correct": 16,
+        "Non_Lib_Incorrect": 15,
+        "Total_Entries": 184,
+        "Average_Rank": 1.1929824561403508
+    },
+    "CWE-787": {
+        "Library_Presence": 115,
+        "Library_Correct": 73,
+        "Library_Wrong": 32,
+        "Non_Lib_Correct": 10,
+        "Non_Lib_Incorrect": 9,
+        "Total_Entries": 124,
+        "Average_Rank": 1.0260869565217392
+    },
+    "Total": {
+        "Library_Presence": 1003,
+        "Library_Correct": 612,
+        "Library_Wrong": 296,
+        "Non_Lib_Correct": 111,
+        "Non_Lib_Incorrect": 103,
+        "Total_Entries": 1122,
+        "Average_Rank": 1.1904287138584246
+    }
+}

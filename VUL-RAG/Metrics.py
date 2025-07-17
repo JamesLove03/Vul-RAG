@@ -36,10 +36,14 @@ if __name__ == '__main__':
             "gpt-4o",
             "default-settings"
         )
-        result_dir_list.append(os.path.dirname(output_path))
-        common_util.calculate_VD_metrics(output_path)
+        result_dir_list.append(os.path.dirname(output_path))    
+    
+    directory = "C:/Users/james/Work/Vul-RAG/output/vul_detection_data/FINAL_ORIGINAL/default-settings"
+    
+    common_util.calculate_VD_metrics(directory)
 
-    result_dir_list = list(set(result_dir_list))
-    assert len(result_dir_list) == 1
-    for result_dir in result_dir_list:
-        common_util.calculate_VD_metrics(result_dir)
+    # result_dir_list = list(set(result_dir_list))
+    # assert len(result_dir_list) == 1
+    # for result_dir in result_dir_list:
+    #     common_util.calculate_VD_metrics(result_dir)
+    #     print(result_dir)

@@ -695,6 +695,22 @@ class VulRAGDetector:
                     "lib_decision": dec,
                     "Counter": lib_counter
                 }
+            elif constant.LLMResponseKeywords.POS_ANS.value in sol_output:
+                {
+                    "id": sample_id,
+                    "cve_id": query_cve,
+                    "purpose": purpose, 
+                    "function": function, 
+                    "code_snippet": code_snippet, 
+                    "detect_result": detect_result, 
+                    "detection_model": self.model_instance.get_model_name(),
+                    "summary_model": self.summary_model_instance.get_model_name(),
+                    "model_settings": model_settings_dict,
+                    "final_result": 0,
+                    "lib_present": lib,
+                    "lib_decision": dec,
+                    "Counter": lib_counter
+                }
             else:
                 continue
 

@@ -3,8 +3,8 @@ import random
 from collections import defaultdict
 
 # Constants
-INPUT_FILE = "Linux_kernel_clean_data_top5_CWEs.json"
-TOP_5_CWES = {"CWE-416", "CWE-476", "CWE-362", "CWE-119", "CWE-787"}
+INPUT_FILE = "Linux_kernel_clean_data_top10_CWEs.json"
+TOP_10_CWES = {"CWE-416", "CWE-476", "CWE-362", "CWE-119", "CWE-787", "CWE-20", "CWE-200", "CWE-125", "CWE-264", "CWE-401"}
 
 # Load data
 with open(INPUT_FILE, "r") as infile:
@@ -13,7 +13,7 @@ with open(INPUT_FILE, "r") as infile:
 # Filter to only entries with at least one valid CWE
 filtered_data = [
     entry for entry in data
-    if any(cwe in TOP_5_CWES for cwe in entry.get("cwe", []))
+    if any(cwe in TOP_10_CWES for cwe in entry.get("cwe", []))
 ]
 
 # Group entries by CVE ID
@@ -34,23 +34,23 @@ for entries in cve_groups.values():
         continue
     train_entry = entries.pop()
     for cwe in train_entry.get("cwe", []):
-        if cwe in TOP_5_CWES:
+        if cwe in TOP_10_CWES:
             train_sets[cwe].append(train_entry)
 
     if entries:
         test_entry = entries.pop()
         for cwe in test_entry.get("cwe", []):
-            if cwe in TOP_5_CWES:
+            if cwe in TOP_10_CWES:
                 test_sets[cwe].append(test_entry)
 
     for entry in entries:
-        target = train_sets if random.random() < 0.7 else test_sets
+        target = train_sets if random.random() < 0.8 else test_sets  # 80% train, 20% test
         for cwe in entry.get("cwe", []):
-            if cwe in TOP_5_CWES:
+            if cwe in TOP_10_CWES:
                 target[cwe].append(entry)
 
 # Write files per CWE
-for cwe in TOP_5_CWES:
+for cwe in TOP_10_CWES:
     train_filename = f"Linux_kernel_{cwe}_clean_data.json"
     test_filename = f"Linux_kernel_{cwe}_clean-data_testset_new.json"
 
@@ -66,13 +66,17 @@ total_train = sum(len(entries) for entries in train_sets.values())
 train_cves = {e['cve_id'] for entries in train_sets.values() for e in entries}
 print(f"  Total entries: {total_train}")
 print(f"  Unique CVEs: {len(train_cves)}")
-for cwe in sorted(TOP_5_CWES):
-    print(f"  {cwe}: {len(train_sets[cwe])} entries")
+for cwe in sorted(TOP_10_CWES):
+    cwe_train_entries = train_sets[cwe]
+    unique_train_cves = {e['cve_id'] for e in cwe_train_entries}
+    print(f"  {cwe}: {len(cwe_train_entries)} entries, {len(unique_train_cves)} unique CVEs")
 
 print("\nTesting set metrics:")
 total_test = sum(len(entries) for entries in test_sets.values())
 test_cves = {e['cve_id'] for entries in test_sets.values() for e in entries}
 print(f"  Total entries: {total_test}")
 print(f"  Unique CVEs: {len(test_cves)}")
-for cwe in sorted(TOP_5_CWES):
-    print(f"  {cwe}: {len(test_sets[cwe])} entries")
+for cwe in sorted(TOP_10_CWES):
+    cwe_test_entries = test_sets[cwe]
+    unique_test_cves = {e['cve_id'] for e in cwe_test_entries}
+    print(f"  {cwe}: {len(cwe_test_entries)} entries, {len(unique_test_cves)} unique CVEs")
