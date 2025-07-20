@@ -50,49 +50,49 @@ class ESRetrieval:
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
-            timeout=60,
+            timeout=120,
         )
         self.ds_code_before_change: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
-            timeout=60,
+            timeout=120,
         )
         self.ds_gpt_function: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
-            timeout=60,
+            timeout=120,
         )
         self.ds_gpt_purpose: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
-            timeout=60,
+            timeout=120,
         )
         self.ds_solution: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
-            timeout=60,
+            timeout=120,
         )
         self.ds_specific_code_behavior_causing_vulnerability: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
-            timeout=60,
+            timeout=120,
         )
         self.ds_trigger_condition: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
-            timeout=60,
+            timeout=120,
         )
         self.ds_preconditions_for_vulnerability: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
-            timeout=60,
+            timeout=120,
         )
         self.cbc_retriever: ElasticsearchRetriever = ElasticsearchRetriever(
             document_store = self.ds_code_before_change

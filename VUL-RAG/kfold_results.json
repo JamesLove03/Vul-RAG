@@ -1,32 +1,32 @@
 [
     {
         "fold": 1,
-        "train_size": 12800,
-        "valid_size": 3200,
-        "accuracy": 0.8
+        "train_size": 12606,
+        "valid_size": 3152,
+        "accuracy": 0.9175126903553299
     },
     {
         "fold": 2,
-        "train_size": 12800,
-        "valid_size": 3200,
-        "accuracy": 0.72875
+        "train_size": 12605,
+        "valid_size": 3153,
+        "accuracy": 0.917221693625119
     },
     {
         "fold": 3,
-        "train_size": 12800,
-        "valid_size": 3200,
-        "accuracy": 0.79625
+        "train_size": 12607,
+        "valid_size": 3151,
+        "accuracy": 0.90352269120914
     },
     {
         "fold": 4,
-        "train_size": 12799,
-        "valid_size": 3201,
-        "accuracy": 0.7725710715401437
+        "train_size": 12607,
+        "valid_size": 3151,
+        "accuracy": 0.9193906696286893
     },
     {
         "fold": 5,
-        "train_size": 12801,
-        "valid_size": 3199,
-        "accuracy": 0.7424195060956549
+        "train_size": 12607,
+        "valid_size": 3151,
+        "accuracy": 0.9152649952396065
     }
 ]

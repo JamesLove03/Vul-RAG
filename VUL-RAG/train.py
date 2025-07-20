@@ -23,7 +23,7 @@ def train_model():
     X = [] #holds the lists of 6 ratings
     y = [] #holds 1/0 for correct or incorrect
     #Get CWE Item from test file
-    CWE_list = ["CWE-119", "CWE-362", "CWE-416", "CWE-476", "CWE-787"]
+    CWE_list = ["CWE-119", "CWE-362", "CWE-416", "CWE-476", "CWE-787", "CWE-20", "CWE-125", "CWE-200", "CWE-264", "CWE-401"]
     
     raw_list = []
     pos_reg_fin = 0
@@ -36,6 +36,7 @@ def train_model():
     if os.path.exists("final_data.json"):
         with open("final_data.json", 'r', encoding='utf-8') as f:
             raw_list = json.load(f)
+            group = [item["group_id"] for item in raw_list]
 
     #Iterate through each CVE
     for cwe_id in CWE_list:
@@ -74,13 +75,13 @@ def train_model():
                     )
             
             if vulresult is not None:
+                for entry in vulresult:
+                    entry["group_id"] = cve_item["id"]
                 raw_list.extend(vulresult)
             if nonvulresult is not None:
+                for entry in nonvulresult:
+                    entry["group_id"] = cve_item["id"]
                 raw_list.extend(nonvulresult)
-
-            group_length = len(vulresult) + len(nonvulresult)
-            for i in range(group_length):
-                group.append(cve_item["id"])
 
             for entry in vulresult:
                 X.append(entry["scores"])
@@ -89,6 +90,7 @@ def train_model():
                     neg_reg += 1
                 if entry["label"] == 1:
                     pos_reg += 1
+                group.append(entry["group_id"])
             for entry in nonvulresult:
                 X.append(entry["scores"])
                 y.append(int(entry["label"]))
@@ -96,6 +98,8 @@ def train_model():
                     neg_reg += 1
                 if entry["label"] == 1:
                     pos_reg += 1
+                group.append(entry["group_id"])
+
 
 
             with open("final_data.json", "w") as f:
@@ -103,8 +107,7 @@ def train_model():
             already_ran.append(cve_item["id"])
             with open("used.json", "w") as f:
                 json.dump(already_ran, f, indent=2)
-            with open("sample_to_group.json", "w") as f:
-                json.dump(group, f, indent=2)
+            
 
             print(f"So far at {pos_reg} positive and {neg_reg} negative examples for {cwe_id}")
 
@@ -157,7 +160,6 @@ def train_model():
                       num_boost_round=100,
                       valid_sets=[valid_data],
                       callbacks=[lgb.early_stopping(stopping_rounds=10)],
-                      verbose_eval=False
                       )
         #output info about scoring across folds
         y_pred = model.predict(X_val)
@@ -186,11 +188,11 @@ def load_model():
         raw_list = json.load(f)
     with open("used.json", "r") as f:
         already_ran = json.load(f)
-    with open("sample_to_group.json", "r") as f:
-        group = json.load(f)
 
     scores = [item["scores"] for item in raw_list]
     labels = [item["label"] for item in raw_list]
+    group = [item["group_id"] for item in raw_list]
+
 
     X = np.array(scores)
     y = np.array(labels)
