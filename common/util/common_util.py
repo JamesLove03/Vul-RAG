@@ -94,6 +94,7 @@ def match_LLM_response_by_keyword(response: str, keyword: str, separator: str) -
 
 
 def calculate_metrics(**confusion_matrix) -> dict:
+    print("calc_metrics was called")
     """
     Calculate various performance metrics based on the provided confusion matrix.
     Args:
@@ -173,6 +174,7 @@ def calculate_metrics(**confusion_matrix) -> dict:
 
     id_result_map = confusion_matrix.get('id_result_map')
     if id_result_map:
+        print("id_result_map accessed")
         valid_pair_cnt = 0
         accurate_pair_cnt = 0
         pair_1_cnt = 0
@@ -266,7 +268,7 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
                     if vul['lib_present'] == 1:
                         if vul['lib_decision'] == 1:
                             cfs_mat[mk.CLE.value] += 1
-                        elif vul['lib_decision' == 0]:
+                        elif vul['lib_decision'] == 0:
                             cfs_mat[mk.WLE.value] += 1
                 
                 cfs_mat[mk.SPC.value] += vul["Counter"]
@@ -314,7 +316,6 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
                 mk.PD.value: cfg.RESULT_UNIFORM_MAP[non_vul['final_result']],
                 mk.GT.value: 0
             })
-
         metrics_data = calculate_metrics(**cfs_mat, id_result_map = id_result_map)
         # logging.info(f"Result File: {result_file}")
         # logging.info(f"{mk.TP.value}: {cfs_mat.get(mk.TP.value)}")
@@ -344,7 +345,7 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
         total_cfs_mat[mk.CLE.value] += metrics_data.get(mk.CLE.value)
         total_cfs_mat[mk.WLE.value] += metrics_data.get(mk.WLE.value)
         total_cfs_mat[mk.SPC.value] += metrics_data.get(mk.SPC.value)
-
+        print("is this it: ", metrics_data.get(mk.VPC.value))
         total_valid_pair_cnt += metrics_data.get(mk.VPC.value)
         total_accurate_pair_cnt += metrics_data.get(mk.APC.value)
         total_pair_1_cnt += metrics_data.get(mk.P1C.value)
@@ -378,7 +379,6 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
         total_metrics_data[mk.P1R.value] = round(total_metrics_data[mk.P1R.value], cfg.METRICS_DECIMAL_PLACES_RESERVED)
         total_metrics_data[mk.P0R.value] = round(total_metrics_data[mk.P0R.value], cfg.METRICS_DECIMAL_PLACES_RESERVED)
         total_metrics_data[mk.APN.value] = round((total_metrics_data[mk.SPC.value] / total_metrics_data[mk.PLE.value]), cfg.METRICS_DECIMAL_PLACES_RESERVED)
-        total_metrics_data[mk.PC.value] = round((total_metrics_data[mk.PLE.value] / (total_valid_pair_cnt*2)), cfg.METRICS_DECIMAL_PLACES_RESERVED)
         total_metrics_data[mk.CLR.value] = round((total_metrics_data[mk.CLE.value] / (total_valid_pair_cnt*2)), cfg.METRICS_DECIMAL_PLACES_RESERVED)
         logging.info(f"Total Metrics:")
         logging.info(f"{mk.TP.value}: {total_cfs_mat.get(mk.TP.value)}")

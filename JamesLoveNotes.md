@@ -63,7 +63,7 @@ python ChatGPT_Extraction.py --extract_knowledge --store_knowledge --extract_onl
 
 python LLM4Detection_baseline.py --CWE_list CWE-416 --model-name "gpt-3.5-turbo" --prompt-type 0 --model_settings
 
-python VulRAG_detection.py --CWE_list CWE-416 --model-name gpt-3.5-turbo --summary-model-name gpt-3.5-turbo --model_settings --retrieve_by_code
+python VulRAG_detection.py --CWE_list CWE-416 --model-name gpt-4o --summary-model-name gpt-4o-mini --model_settings --retrieve_by_code
 
 make sure to include this line when running
 $env:PYTHONPATH = "C:\Users\james\work\Vul-RAG"

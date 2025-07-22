@@ -26,7 +26,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 80,
@@ -54,7 +57,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 108,
@@ -82,7 +88,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 871,
@@ -110,7 +119,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 78,
@@ -138,7 +150,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 77,
@@ -166,7 +181,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 90,
@@ -194,7 +212,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 93,
@@ -222,7 +243,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 87,
@@ -250,7 +274,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 4083,
@@ -278,7 +305,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 4082,
@@ -306,7 +336,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 4078,
@@ -334,7 +367,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 764,
@@ -362,7 +398,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 1366,
@@ -390,7 +429,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 3894,
@@ -418,7 +460,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2830,
@@ -446,7 +491,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 873,
@@ -474,7 +522,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 74,
@@ -502,7 +553,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2638,
@@ -530,7 +584,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 4084,
@@ -558,7 +615,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 689,
@@ -586,7 +646,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 4020,
@@ -614,7 +677,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2670,
@@ -642,7 +708,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 4024,
@@ -670,7 +739,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 496,
@@ -698,7 +770,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2637,
@@ -726,7 +801,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 1835,
@@ -769,7 +847,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2947,
@@ -797,7 +878,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 2865,
@@ -825,7 +909,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 1837,
@@ -853,7 +940,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 3261,
@@ -911,7 +1001,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 3398,
@@ -939,7 +1032,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2622,
@@ -967,7 +1063,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2767,
@@ -995,7 +1094,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 2442,
@@ -1023,7 +1125,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 164,
@@ -1051,7 +1156,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 3146,
@@ -1079,7 +1187,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 3480,
@@ -1107,7 +1218,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 919,
@@ -1135,7 +1249,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 3481,
@@ -1163,7 +1280,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 1255,
@@ -1191,7 +1311,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2765,
@@ -1219,7 +1342,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2766,
@@ -1247,7 +1373,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 1650,
@@ -1275,7 +1404,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 2626,
@@ -1303,7 +1435,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 842,
@@ -1346,7 +1481,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 4110,
@@ -1389,7 +1527,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 4111,
@@ -1417,7 +1558,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 3149,
@@ -1445,7 +1589,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2864,
@@ -1473,7 +1620,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 3147,
@@ -1501,7 +1651,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 4244,
@@ -1544,7 +1697,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 3054,
@@ -1572,7 +1728,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 2863,
@@ -1600,7 +1759,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 3101,
@@ -1628,7 +1790,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 162,
@@ -1656,7 +1821,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 885,
@@ -1684,7 +1852,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 1782,
@@ -1712,7 +1883,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2612,
@@ -1740,7 +1914,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 1959,
@@ -1768,7 +1945,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 1957,
@@ -1796,7 +1976,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 4243,
@@ -1824,7 +2007,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 2611,
@@ -1852,7 +2038,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 2341,
@@ -1880,7 +2069,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 1301,
@@ -1908,7 +2100,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 789,
@@ -1936,7 +2131,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 428,
@@ -1964,7 +2162,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 3021,
@@ -1992,7 +2193,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 2980,
@@ -2020,7 +2224,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 1855,
@@ -2048,7 +2255,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 1573,
@@ -2076,7 +2286,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 564,
@@ -2104,7 +2317,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 4114,
@@ -2132,7 +2348,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 1857,
@@ -2160,7 +2379,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 3754,
@@ -2188,7 +2410,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 3870,
@@ -2246,7 +2471,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 3171,
@@ -2274,7 +2502,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 899,
@@ -2302,7 +2533,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 1488,
@@ -2330,7 +2564,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 882,
@@ -2358,7 +2595,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 857,
@@ -2386,7 +2626,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         }
     ],
     "non_vul_data": [
@@ -2416,7 +2659,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 80,
@@ -2444,7 +2690,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 108,
@@ -2472,7 +2721,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 871,
@@ -2500,7 +2752,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 78,
@@ -2528,7 +2783,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 77,
@@ -2556,7 +2814,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 90,
@@ -2584,7 +2845,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 93,
@@ -2612,7 +2876,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 87,
@@ -2640,7 +2907,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 4083,
@@ -2668,7 +2938,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 4082,
@@ -2696,7 +2969,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 4078,
@@ -2724,7 +3000,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 764,
@@ -2752,7 +3031,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 1366,
@@ -2780,7 +3062,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 3894,
@@ -2808,7 +3093,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2830,
@@ -2836,7 +3124,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 873,
@@ -2864,7 +3155,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 74,
@@ -2892,7 +3186,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2638,
@@ -2935,7 +3232,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 4084,
@@ -2963,7 +3263,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 689,
@@ -2991,7 +3294,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 4020,
@@ -3019,7 +3325,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2670,
@@ -3047,7 +3356,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 4024,
@@ -3075,7 +3387,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 496,
@@ -3103,7 +3418,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2637,
@@ -3131,7 +3449,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 1835,
@@ -3159,7 +3480,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2947,
@@ -3187,7 +3511,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 2865,
@@ -3215,7 +3542,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 1837,
@@ -3243,7 +3573,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 3261,
@@ -3271,7 +3604,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 3398,
@@ -3299,7 +3635,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 2622,
@@ -3327,7 +3666,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2767,
@@ -3355,7 +3697,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 2442,
@@ -3383,7 +3728,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 164,
@@ -3411,7 +3759,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 3146,
@@ -3439,7 +3790,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 3480,
@@ -3467,7 +3821,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 919,
@@ -3495,7 +3852,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 3481,
@@ -3523,7 +3883,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 1255,
@@ -3551,7 +3914,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2765,
@@ -3579,7 +3945,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2766,
@@ -3607,7 +3976,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 1650,
@@ -3635,7 +4007,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 2626,
@@ -3663,7 +4038,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 842,
@@ -3691,7 +4069,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 4110,
@@ -3719,7 +4100,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 4111,
@@ -3747,7 +4131,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 3149,
@@ -3775,7 +4162,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2864,
@@ -3803,7 +4193,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 3147,
@@ -3831,7 +4224,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 4244,
@@ -3859,7 +4255,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 3054,
@@ -3887,7 +4286,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 2863,
@@ -3915,7 +4317,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 3101,
@@ -3943,7 +4348,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 162,
@@ -3971,7 +4379,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 885,
@@ -3999,7 +4410,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 1782,
@@ -4027,7 +4441,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 2612,
@@ -4055,7 +4472,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 1959,
@@ -4083,7 +4503,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 1957,
@@ -4111,7 +4534,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 4243,
@@ -4139,7 +4565,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 2611,
@@ -4167,7 +4596,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 2341,
@@ -4195,7 +4627,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 1301,
@@ -4238,7 +4673,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 789,
@@ -4266,7 +4704,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 428,
@@ -4294,7 +4735,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 3021,
@@ -4322,7 +4766,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 2980,
@@ -4350,7 +4797,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 1855,
@@ -4378,7 +4828,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 1573,
@@ -4406,7 +4859,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 564,
@@ -4434,7 +4890,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 4114,
@@ -4462,7 +4921,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 1857,
@@ -4490,7 +4952,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 3754,
@@ -4518,7 +4983,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 3870,
@@ -4561,7 +5029,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 3171,
@@ -4589,7 +5060,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 899,
@@ -4617,7 +5091,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 0,
+            "lib_present": 0,
+            "Counter": 0
         },
         {
             "id": 1488,
@@ -4645,7 +5122,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 882,
@@ -4673,7 +5153,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 1
+            "final_result": 1,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         },
         {
             "id": 857,
@@ -4701,7 +5184,10 @@
             "detection_model": "gpt-4o",
             "summary_model": "gpt-4o-mini",
             "model_settings": {},
-            "final_result": 0
+            "final_result": 0,
+            "lib_decision": 1,
+            "lib_present": 1,
+            "Counter": 0
         }
     ]
 }

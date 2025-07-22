@@ -13,7 +13,6 @@ import json
 import openai
 import tiktoken
 from elasticsearch import Elasticsearch
-from .learned_reranker import LearnedReranker
 import numpy as np
 import lightgbm as lgb
 import os

@@ -198,7 +198,7 @@ For example, instead of writing mutex_lock(&dmxdev->mutex), simply use mutex_loc
 class VulRAGPrompt:
     @staticmethod
     def generate_detect_vul_prompt(code_snippet, cve_knowledge) -> str:
-       return f"""I want you to determine whether a specific vulnerability exists in a piece of code. Focus on behavioral patterns instead of keyword or syntax matching.
+       return f"""I want you to act as a code analysis expert and determine whether a specific vulnerability exists in a piece of code. Focus on behavioral patterns instead of keyword or syntax matching.
 Here is some relevant information about the vulnerability and how to identify it.
 Vulnerability Knowledge:
 '''
@@ -209,16 +209,16 @@ Code Snippet:
 '''
 {code_snippet}
 '''
-Perform a step-by-step analysis to identify whether the code snippet demonstrates any behaviors or logic similar to what is described in the vulnerability knowledge. Focus only on the provided information - do not infer or assume unrelated vulnerabilities. Avoid assuming a vulnerability exists without clear evidence. Avoid overgeneralizing the vulnerability knowledge. 
-After your step-by-step comparison, recheck your reasoning to ensure your conclusion is based on specific, observable code behavior.
+Perform a step-by-step analysis to identify whether the code snippet demonstrates any behaviors or logic similar to what’s described in the vulnerability knowledge. Focus solely on the given information. Do not infer unrelated vulnerabilities or assume a vulnerability without clear evidence. Avoid overgeneralizing the vulnerability knowledge.
 Conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value} 
 Remember we are trying to decide if the provided code is vulnerable to the provided vulnerability only.
 """
 
+
     @staticmethod
     def generate_detect_sol_prompt(code_snippet, cve_knowledge) -> str:
-        return f"""I want you to determine whether the following code contains the specific solution behaviors or logic that address and fix the identified vulnerability.
-Here is the knowledge on the identified vulnerability and how it has been mitigated in similar cases.
+        return f"""I want you to act as a code analysis expert and determine whether the specific solution behaviors exist in a piece of code. Focus on behavioral patterns instead of keyword or syntax matching.
+Here is some relevant knowledge on the identified vulnerability and how it has been mitigated in similar cases.
 Vulnerability Knowledge:
 '''
 {cve_knowledge}
@@ -228,8 +228,7 @@ Code Snippet:
 '''
 {code_snippet}
 '''
-Perform a step-by-step analysis to determine whether the code snippet contains the explicit solution behaviors as described in the Vulnerability Knowledge. Focus only on the provided vulnerability and its solution information - do not infer unrelated vulnerabilities or generic solutions. Avoid assuming a solution is present without clear evidence. Avoid overgeneralizing from partial matches. Focus on the logic and behavior of the code, instead of keywords or structure. 
-After your step-by-step analysis, recheck your reasoning to ensure your conclusion is based on specific, observable mitigation behaviour.
+Perform a step-by-step analysis to determine whether the code snippet contains behaviors or logic similar to the solution behaviors described in the Vulnerability Knowledge. Focus only on the given information. Do not infer unrelated vulnerabilities or generic solutions. Avoid assuming a solution is present without clear evidence. Avoid overgeneralizing the vulnerability knowledge.
 Conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
 Remember you are trying to determine if the provided code contains the specific solution described in the provided vulnerability knowledge only.
 """

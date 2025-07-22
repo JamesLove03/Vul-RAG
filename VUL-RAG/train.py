@@ -186,8 +186,6 @@ def load_model():
     
     with open("final_data.json", "r") as f:
         raw_list = json.load(f)
-    with open("used.json", "r") as f:
-        already_ran = json.load(f)
 
     scores = [item["scores"] for item in raw_list]
     labels = [item["label"] for item in raw_list]

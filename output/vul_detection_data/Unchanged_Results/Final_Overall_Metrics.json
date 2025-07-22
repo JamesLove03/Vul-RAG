@@ -3,11 +3,11 @@
     "True Positive": 367,
     "False Negative": 194,
     "False Positive": 261,
-    "Present Library Entry": 863,
-    "Correct Library Entry": 497,
-    "Wrong Library Entry": 131,
-    "Sum Pick Counter": 1156,
-    "Precision": 0.7692,
+    "Present Library Entry": 860,
+    "Correct Library Entry": 545,
+    "Wrong Library Entry": 195,
+    "Sum Pick Counter": 0,
+    "Precision": 0.5958,
     "Recall": 0.5945,
     "F1 Score": 0.5952,
     "Accuracy": 0.5945,
@@ -20,6 +20,6 @@
     "Pair Accuracy": 0.303,
     "Pair_1 Rate": 0.3512,
     "Pair_0 Rate": 0.2317,
-    "Average Pick Number": 1.3395,
-    "Correct Lib Decision Rate": 0.443
+    "Average Pick Number": 0.0,
+    "Correct Lib Decision Rate": 0.4857
 }

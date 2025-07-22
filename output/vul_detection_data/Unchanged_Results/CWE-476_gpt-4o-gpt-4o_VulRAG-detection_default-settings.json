@@ -29,7 +29,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 594,
@@ -60,7 +60,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 879,
@@ -136,7 +136,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 3
+            "Counter": 0
         },
         {
             "id": 895,
@@ -222,9 +222,9 @@
             "summary_model": "gpt-4o",
             "model_settings": {},
             "final_result": 0,
-            "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 2
+            "lib_present": 0,
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 1290,
@@ -270,7 +270,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1294,
@@ -301,7 +301,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1303,
@@ -354,7 +354,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1330,
@@ -415,7 +415,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1334,
@@ -446,7 +446,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1338,
@@ -477,7 +477,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1328,
@@ -507,8 +507,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 1341,
@@ -539,7 +539,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1391,
@@ -585,7 +585,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1401,
@@ -665,7 +665,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1424,
@@ -828,7 +828,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1450,
@@ -964,9 +964,9 @@
             "summary_model": "gpt-4o",
             "model_settings": {},
             "final_result": 0,
-            "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 6
+            "lib_present": 0,
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 1497,
@@ -1004,8 +1004,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 1550,
@@ -1253,7 +1253,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 2
+            "Counter": 0
         },
         {
             "id": 1590,
@@ -1318,7 +1318,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1667,
@@ -1364,7 +1364,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1683,
@@ -1487,7 +1487,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1687,
@@ -1590,7 +1590,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1843,
@@ -1621,7 +1621,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1898,
@@ -1676,7 +1676,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 2
+            "Counter": 0
         },
         {
             "id": 1899,
@@ -1716,7 +1716,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1953,
@@ -1762,7 +1762,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1988,
@@ -1793,7 +1793,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1990,
@@ -1855,7 +1855,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2012,
@@ -1886,7 +1886,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2011,
@@ -1987,7 +1987,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2029,
@@ -2024,9 +2024,9 @@
             "summary_model": "gpt-4o",
             "model_settings": {},
             "final_result": 0,
-            "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 2
+            "lib_present": 0,
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 2034,
@@ -2067,7 +2067,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2115,
@@ -2098,7 +2098,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2107,
@@ -2128,8 +2128,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 2114,
@@ -2160,7 +2160,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2116,
@@ -2191,7 +2191,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2112,
@@ -2222,7 +2222,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2109,
@@ -2253,7 +2253,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2121,
@@ -2305,9 +2305,9 @@
             "summary_model": "gpt-4o",
             "model_settings": {},
             "final_result": 0,
-            "lib_present": 1,
+            "lib_present": 0,
             "lib_decision": 0,
-            "Counter": 3
+            "Counter": 0
         },
         {
             "id": 2177,
@@ -2344,7 +2344,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2253,
@@ -2440,7 +2440,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 2
+            "Counter": 0
         },
         {
             "id": 2406,
@@ -2517,7 +2517,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2428,
@@ -2560,7 +2560,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2429,
@@ -2696,7 +2696,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2465,
@@ -2841,7 +2841,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2516,
@@ -2894,7 +2894,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2515,
@@ -3128,8 +3128,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 2
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 2586,
@@ -3172,7 +3172,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2625,
@@ -3228,7 +3228,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 2
+            "Counter": 0
         },
         {
             "id": 2626,
@@ -3269,7 +3269,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2639,
@@ -3323,8 +3323,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 2
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 3083,
@@ -3385,7 +3385,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 3
+            "Counter": 0
         },
         {
             "id": 3132,
@@ -3430,8 +3430,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 1
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 3255,
@@ -3494,8 +3494,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 1
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 3271,
@@ -3525,8 +3525,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 3295,
@@ -3572,7 +3572,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 3450,
@@ -3623,8 +3623,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 1
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 3454,
@@ -3678,7 +3678,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 3448,
@@ -3709,7 +3709,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 3460,
@@ -3770,7 +3770,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 3442,
@@ -3975,8 +3975,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 1
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 3455,
@@ -4021,7 +4021,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 3443,
@@ -4066,8 +4066,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 1
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 3555,
@@ -4096,9 +4096,9 @@
             "summary_model": "gpt-4o",
             "model_settings": {},
             "final_result": 0,
-            "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 3
+            "lib_present": 0,
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 3558,
@@ -4169,7 +4169,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 3
+            "Counter": 0
         },
         {
             "id": 3865,
@@ -4200,7 +4200,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 3873,
@@ -4459,8 +4459,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 1
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 3932,
@@ -4560,8 +4560,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 1
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 3975,
@@ -4601,8 +4601,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 3982,
@@ -4704,8 +4704,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 2
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 3991,
@@ -4761,7 +4761,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 4031,
@@ -4792,7 +4792,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 4032,
@@ -4886,7 +4886,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 4062,
@@ -4917,7 +4917,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         }
     ],
     "non_vul_data": [
@@ -4950,7 +4950,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 594,
@@ -4981,7 +4981,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 879,
@@ -5043,7 +5043,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 960,
@@ -5098,8 +5098,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 1290,
@@ -5129,8 +5129,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 1294,
@@ -5176,7 +5176,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1303,
@@ -5206,8 +5206,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 1330,
@@ -5238,7 +5238,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1334,
@@ -5269,7 +5269,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1338,
@@ -5300,7 +5300,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1328,
@@ -5331,7 +5331,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1341,
@@ -5362,7 +5362,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1391,
@@ -5423,7 +5423,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1401,
@@ -5491,7 +5491,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1424,
@@ -5545,9 +5545,9 @@
             "summary_model": "gpt-4o",
             "model_settings": {},
             "final_result": 0,
-            "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 7
+            "lib_present": 0,
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 1454,
@@ -5653,8 +5653,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 1450,
@@ -5789,8 +5789,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 1497,
@@ -5831,7 +5831,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1550,
@@ -6096,7 +6096,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 2
+            "Counter": 0
         },
         {
             "id": 1590,
@@ -6161,7 +6161,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1667,
@@ -6206,8 +6206,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 1683,
@@ -6330,7 +6330,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1687,
@@ -6444,8 +6444,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 1843,
@@ -6476,7 +6476,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1898,
@@ -6515,8 +6515,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 1899,
@@ -6546,8 +6546,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 1953,
@@ -6593,7 +6593,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 1988,
@@ -6622,9 +6622,9 @@
             "summary_model": "gpt-4o",
             "model_settings": {},
             "final_result": 0,
-            "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 2
+            "lib_present": 0,
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 1990,
@@ -6655,7 +6655,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2008,
@@ -6685,8 +6685,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 2012,
@@ -6725,7 +6725,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2011,
@@ -6855,8 +6855,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 1
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 2029,
@@ -6895,9 +6895,9 @@
             "summary_model": "gpt-4o",
             "model_settings": {},
             "final_result": 0,
-            "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 2
+            "lib_present": 0,
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 2034,
@@ -6926,9 +6926,9 @@
             "summary_model": "gpt-4o",
             "model_settings": {},
             "final_result": 0,
-            "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 2
+            "lib_present": 0,
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 2115,
@@ -6958,8 +6958,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 2107,
@@ -6989,8 +6989,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 2114,
@@ -7020,8 +7020,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 2116,
@@ -7052,7 +7052,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2112,
@@ -7082,8 +7082,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 2109,
@@ -7114,7 +7114,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2121,
@@ -7166,9 +7166,9 @@
             "summary_model": "gpt-4o",
             "model_settings": {},
             "final_result": 0,
-            "lib_present": 1,
+            "lib_present": 0,
             "lib_decision": 0,
-            "Counter": 2
+            "Counter": 0
         },
         {
             "id": 2177,
@@ -7205,7 +7205,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2253,
@@ -7359,7 +7359,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2406,
@@ -7450,8 +7450,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 2428,
@@ -7480,9 +7480,9 @@
             "summary_model": "gpt-4o",
             "model_settings": {},
             "final_result": 0,
-            "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 3
+            "lib_present": 0,
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 2429,
@@ -7542,9 +7542,9 @@
             "summary_model": "gpt-4o",
             "model_settings": {},
             "final_result": 0,
-            "lib_present": 1,
+            "lib_present": 0,
             "lib_decision": 0,
-            "Counter": 2
+            "Counter": 0
         },
         {
             "id": 2434,
@@ -7575,7 +7575,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2435,
@@ -7606,7 +7606,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2465,
@@ -7645,7 +7645,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2516,
@@ -7698,7 +7698,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2515,
@@ -7804,7 +7804,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 2
+            "Counter": 0
         },
         {
             "id": 2586,
@@ -7846,8 +7846,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 2625,
@@ -7903,7 +7903,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 2
+            "Counter": 0
         },
         {
             "id": 2626,
@@ -7944,7 +7944,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 2639,
@@ -7999,7 +7999,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 2
+            "Counter": 0
         },
         {
             "id": 3083,
@@ -8029,8 +8029,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 3132,
@@ -8084,8 +8084,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 1
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 3255,
@@ -8130,8 +8130,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 1
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 3271,
@@ -8208,7 +8208,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 3450,
@@ -8239,7 +8239,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 3454,
@@ -8300,7 +8300,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 0,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 3448,
@@ -8336,8 +8336,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 3460,
@@ -8368,7 +8368,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 3442,
@@ -8399,7 +8399,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 3455,
@@ -8430,7 +8430,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 3443,
@@ -8467,7 +8467,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 3555,
@@ -8543,7 +8543,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 4
+            "Counter": 0
         },
         {
             "id": 3558,
@@ -8605,7 +8605,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 3873,
@@ -8634,9 +8634,9 @@
             "summary_model": "gpt-4o",
             "model_settings": {},
             "final_result": 0,
-            "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 9
+            "lib_present": 0,
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 3927,
@@ -8666,8 +8666,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 3932,
@@ -8764,7 +8764,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 3975,
@@ -8805,7 +8805,7 @@
             "final_result": 0,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 3982,
@@ -8834,9 +8834,9 @@
             "summary_model": "gpt-4o",
             "model_settings": {},
             "final_result": 0,
-            "lib_present": 1,
-            "lib_decision": 1,
-            "Counter": 2
+            "lib_present": 0,
+            "lib_decision": 0,
+            "Counter": 0
         },
         {
             "id": 3980,
@@ -8897,7 +8897,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 3
+            "Counter": 0
         },
         {
             "id": 3991,
@@ -8938,7 +8938,7 @@
             "final_result": 1,
             "lib_present": 1,
             "lib_decision": 1,
-            "Counter": 1
+            "Counter": 0
         },
         {
             "id": 4031,
@@ -8968,8 +8968,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         },
         {
             "id": 4032,
@@ -9037,8 +9037,8 @@
             "model_settings": {},
             "final_result": 0,
             "lib_present": 1,
-            "lib_decision": 0,
-            "Counter": 1
+            "lib_decision": 1,
+            "Counter": 0
         }
     ]
 }
