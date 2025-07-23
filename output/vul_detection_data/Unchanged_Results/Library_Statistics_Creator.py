@@ -137,8 +137,10 @@ for cwe_id in cwe_ids:
                 elif final_result == 0:
                     if has_match:
                         results["Library_Wrong"] += 1
-                    else:
+                    elif len(vul_knowledges) != 10:
                         results["Non_Lib_Incorrect"] += 1
+                    else: 
+                        results["No Choice"] += 1
                 elif final_result == -1:
                     results["No Choice"] +=1
 
@@ -152,8 +154,10 @@ for cwe_id in cwe_ids:
                 elif final_result == 0:
                     if last_match:
                         results["Library_Correct"] += 1
-                    else:
+                    elif len(vul_knowledges) != 10:
                         results["Non_Lib_Correct"] += 1
+                    else:
+                        results["No Choice"] += 1
                 elif final_result == -1:
                     results["No Choice"] +=1
 
@@ -191,7 +195,7 @@ final_output["Total"] = total_counts
 total_counts["Pair Accuracy"] = total_pair_correct / total_pair_total
 
 # Write results to lib_results.json
-with open("lib_results.json", "w") as f_out:
+with open("lib_results_metrics.json", "w") as f_out:
     json.dump(final_output, f_out, indent=4)
 
 print("All counts and totals (including total entries) written to lib_results.json.")
