@@ -38,7 +38,7 @@ if __name__ == '__main__':
         )
         # result_dir_list.append(os.path.dirname(output_path))    
     
-    directory = "C:/Users/james/Work/Vul-RAG/output/vul_detection_data/Unchanged_Results"
+    directory = "C:/Coding/Work/Vul-RAG/Vul-RAG/output/vul_detection_data/gpt-4o_gpt-4o-mini/default-settings"
     common_util.calculate_VD_metrics(directory)
 
     # result_dir_list = list(set(result_dir_list))
