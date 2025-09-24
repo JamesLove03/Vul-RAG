@@ -216,6 +216,7 @@ class VulRAGDetector:
         encoding = tiktoken.encoding_for_model(model)
         tokens = encoding.encode(text)
         truncated = tokens[:max_tokens]
+        print("truncated a text")
         return encoding.decode(truncated)
     
     def embedder(self, query):
@@ -345,9 +346,10 @@ class VulRAGDetector:
         #iterate through the 5 different models
         current_dir = os.path.dirname(__file__)
 
+        output_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'output', 'reranker_data')
         models = []
         for fold_idx in range(1,6):
-            model_path = os.path.join(current_dir, f"model_fold_{fold_idx}.txt")
+            model_path = os.path.join(output_dir, f"model_fold_{fold_idx}.txt")
             assert os.path.exists(model_path), f"Model file not found: {model_path}"
             model = lgb.Booster(model_file=model_path)
             models.append(model)

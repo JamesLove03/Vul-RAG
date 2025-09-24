@@ -14,10 +14,13 @@ import openai
 from tqdm import tqdm
 import random
 import json
+import sys
 import os
+output_dir = os.path.join(os.path.dirname(__file__), '..', 'output', 'reranker_data')
 
-
-
+used_path = os.path.join(output_dir, "used.json")
+final_data_path = os.path.join(output_dir, "final_data.json")
+kfold_results_path = os.path.join(output_dir, "kfold_results.json")
 
 def train_model():
     X = [] #holds the lists of 6 ratings
@@ -30,11 +33,13 @@ def train_model():
     neg_reg_fin = 0
     group = []
     already_ran = []
-    if os.path.exists("used.json"):
-        with open("used.json", "r", encoding='utf-8') as f:
+
+
+    if os.path.exists(used_path):
+        with open(used_path, "r", encoding='utf-8') as f:
             already_ran = json.load(f)
-    if os.path.exists("final_data.json"):
-        with open("final_data.json", 'r', encoding='utf-8') as f:
+    if os.path.exists(final_data_path):
+        with open(final_data_path, 'r', encoding='utf-8') as f:
             raw_list = json.load(f)
             group = [item["group_id"] for item in raw_list]
 
@@ -46,6 +51,7 @@ def train_model():
                 cwe_id = cwe_id
             ), "json"
         )
+        
         VulD = VulRAGDetector("gpt-4o", "gpt-4o", knowledge_path)
         test_clean_data_path = PathUtil.test_data(constant.TEST_DATA_FILE_NAME.format(cwe_id = cwe_id), "json")
         test_clean_data = DataUtils.load_json(test_clean_data_path)
@@ -102,10 +108,11 @@ def train_model():
 
 
 
-            with open("final_data.json", "w") as f:
+            with open(final_data_path, "w") as f:
                 json.dump(raw_list, f, indent=2)
+    
             already_ran.append(cve_item["id"])
-            with open("used.json", "w") as f:
+            with open(used_path, "w") as f:
                 json.dump(already_ran, f, indent=2)
             
 
@@ -165,7 +172,7 @@ def train_model():
         y_pred = model.predict(X_val)
         y_pred_labels = (y_pred > 0.5).astype(int)
         acc = accuracy_score(y_val, y_pred_labels)
-        model.save_model(f"model_fold_{fold_idx}.txt")
+        model.save_model(os.path.join(output_dir, (f"model_fold_{fold_idx}.txt")))     
         train_len = len(train_index)
         val_len = len(val_index)
         
@@ -177,14 +184,14 @@ def train_model():
         }
         results.append(fold_result)
 
-    with open("kfold_results.json", "w") as f:
-        json.dump(results, f, indent=4)
+    with open(kfold_results_path, "w") as f:
+        json.dump(results + "\nPositive: {pos_reg_fin} \n Negative: {neg_reg_fin}", f, indent=4)
     
     return
 
 def load_model():
     
-    with open("final_data.json", "r") as f:
+    with open(final_data_path, "r") as f:
         raw_list = json.load(f)
 
     scores = [item["scores"] for item in raw_list]
@@ -238,7 +245,7 @@ def load_model():
         y_pred = model.predict(X_val)
         y_pred_labels = (y_pred > 0.5).astype(int)
         acc = accuracy_score(y_val, y_pred_labels)
-        model.save_model(f"model_fold_{fold_idx}.txt")
+        model.save_model(os.path.join(output_dir, (f"model_fold_{fold_idx}.txt")))     
         train_len = len(train_index)
         val_len = len(val_index)
         
@@ -250,10 +257,10 @@ def load_model():
         }
         results.append(fold_result)
 
-    with open("kfold_results.json", "w") as f:
+    with open(kfold_results_path, "w") as f:
         json.dump(results, f, indent=4)
     
     return
 
 if __name__ == '__main__':
-    load_model()
+    train_model()
