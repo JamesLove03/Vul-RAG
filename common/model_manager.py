@@ -36,6 +36,9 @@ class BaseModel:
     def get_response_with_messages(self, messages: list, **kwargs) -> str:
         logging.disable(logging.INFO)
         response_content = None
+        input_tokens = 0
+        output_tokens = 0
+
         try:
             if self.__client:
                 response = self.__client.chat.completions.create(
@@ -44,6 +47,10 @@ class BaseModel:
                     stream = False,
                     **kwargs
                 )
+                if response.usage:
+                    input_tokens = response.usage.prompt_tokens
+                    output_tokens = response.usage.completion_tokens
+
                 response_content = response.choices[0].message.content
             else:
                 # use the module-level global client
@@ -54,11 +61,15 @@ class BaseModel:
                     messages = messages,
                     **kwargs
                 )
+                if response.usage:
+                    input_tokens = response.usage.prompt_tokens
+                    output_tokens = response.usage.completion_tokens
+
                 response_content = response.choices[0]["message"]["content"]
         except Exception as e:
             logging.error(f"Error while calling {self.__model_name} API: {e}")
         logging.disable(logging.NOTSET)
-        return response_content
+        return response_content, input_tokens, output_tokens
     
     def get_model_name(self):
         return self.__model_name

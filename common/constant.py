@@ -81,12 +81,16 @@ LOGS_DIR = str(Path(ROOT_DIR) / "log")
 MODEL_DIR = str(Path(ROOT_DIR) / "model")
 COMMON_DIR = str(Path(ROOT_DIR) / "common")
 
+
 VUL_KNOWLEDGE_PATTERN_FILE_NAME = "{model_name}_{cwe_id}_316_pattern_all"
 ES_INDEX_NAME_TEMPLATE = "gpt3_316{lower_cwe_id}_{lower_document_name}"
 TEST_DATA_FILE_NAME = "Linux_kernel_{cwe_id}_clean_data_testset_new"
 CLEAN_DATA_FILE_NAME = "Linux_kernel_{cwe_id}_clean_data"
 BASELINE_RESULT_FILE_NAME = "{cwe_id}_{model_name}_detection_baseline_{baseline_settings}"
 VULRAG_DETECTION_RESULT_FILE_NAME = "{cwe_id}_{model_name}-{summary_model_name}_VulRAG-detection_{model_settings}"
+LOG_DIR_NAME = "tracker_output"
+LOG_FILE_NAME = "tracker_raw"
+LOG_FINAL_NAME = "summary"
 
 DEFAULT_SYS_PROMPT = "You are a helpful assistant."
 
