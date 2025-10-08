@@ -35,7 +35,7 @@ id_results_total = {}
 total_pair_correct = 0
 total_pair_total = 0
 for cwe_id in cwe_ids:
-    file_name = f"{cwe_id}_gpt-4o.json"
+    file_name = f"{cwe_id}_gpt-4o-gpt-4o_VulRAG-detection_default-settings.json"
     rank_sum = 0
     id_results = {}
     if not os.path.exists(file_name):

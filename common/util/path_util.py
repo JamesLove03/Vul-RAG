@@ -101,7 +101,7 @@ class PathUtil:
         model_settings: str
     ):
         path = (
-            Path(OUTPUT_DIR) / 'vul_detection_data' /
+            Path(OUTPUT_DIR) / 'vul_detection_data' / 'V2Testing'
             f"{detection_model_name}_{summary_model_name}" /
             model_settings
         )

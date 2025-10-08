@@ -7,6 +7,7 @@ from common import constant
 from common.constant import KnowledgeDocumentName as kdn
 from common.model_manager import ModelManager
 from common import common_prompt
+from common.util.track_util import Tracker
 import pdb
 import logging
 import json
@@ -16,6 +17,7 @@ from elasticsearch import Elasticsearch
 import numpy as np
 import lightgbm as lgb
 import os
+import datetime
 
 class VulRAGDetector:
     def __init__(
@@ -568,7 +570,7 @@ class VulRAGDetector:
             "final_result": 0
         }
 
-    def detection_pipeline(self, code_snippet, state, cwe_name, top_N, **kwargs):
+    def detection_pipeline(self, code_snippet, state, cwe_name, top_N, tracker, **kwargs):
         """
         Detects vulnerabilities in a given code snippet using a pipeline that leverages multiple models and knowledge bases.
         This method processes a code snippet to identify potential vulnerabilities by extracting its purpose and function,
@@ -604,28 +606,43 @@ class VulRAGDetector:
         query_cve = kwargs.get('cve_id')
         no_explanation = kwargs.get('no_explanation', False)
 
+
+        #log the beginning of a query
+        start_time = datetime.now()
+
         # get purpose and function
         purpose_prompt, function_prompt = common_prompt.ExtractionPrompt.generate_extraction_prompt_for_vulrag(code_snippet)
         purpose_messages = self.summary_model_instance.get_messages(purpose_prompt, constant.DEFAULT_SYS_PROMPT)
         function_messages = self.summary_model_instance.get_messages(function_prompt, constant.DEFAULT_SYS_PROMPT)
-        purpose = common_util.extract_LLM_response_by_prefix(
-            self.summary_model_instance.get_response_with_messages(
+        response, p_inp_tokens, p_out_tokens = self.summary_model_instance.get_response_with_messages(
                 purpose_messages,
                 **model_settings_dict
-            ),
+            )
+        purpose = common_util.extract_LLM_response_by_prefix(
+            response,
             constant.LLMResponseSeparator.FUN_PURPOSE_SEP.value
         )
-        function = common_util.extract_LLM_response_by_prefix(
-            self.summary_model_instance.get_response_with_messages(
+        response, f_inp_tokens, f_out_tokens = self.summary_model_instance.get_response_with_messages(
                 function_messages,
                 **model_settings_dict
-            ),
+            )
+        function = common_util.extract_LLM_response_by_prefix(
+            response,
             constant.LLMResponseSeparator.FUN_FUNCTION_SEP.value
         )
+        
+        #call tracker.log with query type to make sure we note the latency of the query
+        end_time = datetime.now()
+        tracker.log("query", (end_time - start_time).total_seconds() * 1000, (p_inp_tokens + f_inp_tokens), (p_out_tokens + f_out_tokens))
 
         print("calling retrieve learned knowledge")
         # retrieve knowledge
+        start_time = datetime.now()
         vul_knowledge_list = self.retrieve_learned_knowledge(cwe_name, code_snippet, purpose, function, top_N)
+        end_time = datetime.now()
+        
+        tracker.log("retrieval", (end_time - start_time).total_seconds() * 1000)
+        
         # logging.info("len(vul_knowledge_list): %d", len(vul_knowledge_list))
         # detect vulnerability with the ranking knowledge list, 
         # if Yes/No is detected, return the result, 
@@ -639,6 +656,7 @@ class VulRAGDetector:
         print("returned with my knowledge")
         for vul_knowledge in vul_knowledge_list[:min(cfg.MAX_RETRIEVE_KNOWLEDGE_NUM, len(vul_knowledge_list))]:
             counter += 1
+            start_time = datetime.now()
             if no_explanation:
                 vul_detect_prompt = common_prompt.VulRAGPrompt.generate_detect_vul_prompt_without_explanation(
                     code_snippet, 
@@ -651,14 +669,14 @@ class VulRAGDetector:
             else:
                 vul_detect_prompt = common_prompt.VulRAGPrompt.generate_detect_vul_prompt(code_snippet, vul_knowledge)
                 sol_detect_prompt = common_prompt.VulRAGPrompt.generate_detect_sol_prompt(code_snippet, vul_knowledge)
-
+            
             vul_messages = self.model_instance.get_messages(vul_detect_prompt, constant.DEFAULT_SYS_PROMPT)
             sol_messages = self.model_instance.get_messages(sol_detect_prompt, constant.DEFAULT_SYS_PROMPT)
-            vul_output = self.model_instance.get_response_with_messages(
+            vul_output, v_inp_tokens, v_out_tokens = self.model_instance.get_response_with_messages(
                 vul_messages,
                 **model_settings_dict
             )
-            sol_output = self.model_instance.get_response_with_messages(
+            sol_output, s_inp_tokens, s_out_tokens = self.model_instance.get_response_with_messages(
                 sol_messages,
                 **model_settings_dict
             )
@@ -669,7 +687,10 @@ class VulRAGDetector:
                 "sol_detect_prompt": sol_detect_prompt,
                 "sol_output": sol_output
             }
-            
+            end_time = datetime.now()
+            tracker.log("query", (end_time - start_time).total_seconds() * 1000, (s_inp_tokens + v_inp_tokens), (s_out_tokens + v_out_tokens))
+
+
             if(query_cve == result["vul_knowledge"]["cve_id"]):
                 lib = 1
                 lib_counter = counter

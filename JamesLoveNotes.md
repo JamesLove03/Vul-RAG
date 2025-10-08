@@ -143,3 +143,10 @@ Rerun test so first test is with updated queries
 Second test will be with old queries
 Third Test will be with updated search
 Fourth Test will be with updated search + updated queries
+
+
+Adding time and token counts:
+
+Write to json file within a subfolder of the detection output
+
+Use a custom class I make within common_util

@@ -9,9 +9,11 @@ from common.util import common_util
 from common.util.path_util import PathUtil
 from common.util.data_utils import DataUtils
 from common import constant
+from common.util.track_util import Tracker
 import logging
 import argparse
 from components.VulRAG import VulRAGDetector
+import datetime
 
 def parse_command_line_arguments():
     parser = argparse.ArgumentParser()
@@ -119,6 +121,8 @@ if __name__ == '__main__':
             args.model_settings
         )
 
+        tracker = Tracker(output_path)
+
         result_dir_list.append(os.path.dirname(output_path))
 
         cve_list = []
@@ -173,7 +177,8 @@ if __name__ == '__main__':
                         sample_id = cve_item['id'],
                         model_settings_dict = args.model_settings_dict,
                         cve_id = cve_item['cve_id'],
-                        no_explanation = args.no_explanation
+                        no_explanation = args.no_explanation,
+                        tracker = tracker
                     )
                     non_vul_detect_result = VulD.detection_pipeline(
                         cve_item['code_after_change'],
@@ -183,7 +188,8 @@ if __name__ == '__main__':
                         sample_id = cve_item['id'],
                         model_settings_dict = args.model_settings_dict,
                         cve_id = cve_item['cve_id'],
-                        no_explanation = args.no_explanation
+                        no_explanation = args.no_explanation,
+                        tracker = tracker
                     )
                 vul_list.append(vul_detect_result)
                 non_vul_list.append(non_vul_detect_result)
@@ -204,6 +210,8 @@ if __name__ == '__main__':
             common_util.calculate_VD_metrics(output_path)
 
     logging.info(f"Detection for all CWEs finished.")
+    end_time = datetime.now().isoformat
+    tracker.create_final(end_time)
     result_dir_list = list(set(result_dir_list))
     assert len(result_dir_list) == 1
     for result_dir in result_dir_list:
