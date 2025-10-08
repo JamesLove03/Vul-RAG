@@ -1,0 +1,32 @@
+[
+    {
+        "fold": 1,
+        "train_size": 13374,
+        "valid_size": 3344,
+        "accuracy": 0.9043062200956937
+    },
+    {
+        "fold": 2,
+        "train_size": 13374,
+        "valid_size": 3344,
+        "accuracy": 0.902811004784689
+    },
+    {
+        "fold": 3,
+        "train_size": 13374,
+        "valid_size": 3344,
+        "accuracy": 0.909988038277512
+    },
+    {
+        "fold": 4,
+        "train_size": 13374,
+        "valid_size": 3344,
+        "accuracy": 0.8989234449760766
+    },
+    {
+        "fold": 5,
+        "train_size": 13376,
+        "valid_size": 3342,
+        "accuracy": 0.895870736086176
+    }
+]
