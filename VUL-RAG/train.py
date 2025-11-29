@@ -19,7 +19,7 @@ import os
 output_dir = os.path.join(os.path.dirname(__file__), '..', 'output', 'reranker_data')
 
 used_path = os.path.join(output_dir, "used.json")
-final_data_path = os.path.join(output_dir, "final_data.json")
+final_data_path = os.path.join(output_dir, "PairVul/PairVul_final_data.json")
 kfold_results_path = os.path.join(output_dir, "kfold_results.json")
 
 def train_model():
@@ -263,4 +263,4 @@ def load_model():
     return
 
 if __name__ == '__main__':
-    train_model()
+    load_model()
