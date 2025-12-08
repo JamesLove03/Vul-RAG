@@ -1,6 +1,9 @@
 import config as cfg
 import openai
 import logging
+import json
+import time
+from util.common_util import fill_template
 try:
     from anthropic import Anthropic
 except:
@@ -12,10 +15,10 @@ class BaseModel:
         self.__base_url = base_url
         self.__model_name = model_name
         self.__api_key = api_key
-        self.__client = None
+        self._client = None
         if api_key:
             try:
-                self.__client = openai.OpenAI(api_key = api_key, base_url = base_url)
+                self._client = openai.OpenAI(api_key = api_key, base_url = base_url)
             except:
                 # Lower version of openai package does not support openai.OpenAI
                 openai.api_key = api_key
@@ -40,8 +43,8 @@ class BaseModel:
         output_tokens = 0
 
         try:
-            if self.__client:
-                response = self.__client.chat.completions.create(
+            if self._client:
+                response = self._client.chat.completions.create(
                     model = self.__model_name,
                     messages = messages,
                     stream = False,
@@ -86,6 +89,20 @@ class BaseModel:
         if "https_proxy" in os.environ:
             del os.environ["https_proxy"]
 
+    def create_batch_file(self, messages, output_path):
+        #create the jsonl batch file in the output_dir
+        custom_id = 0
+        batch = []
+        
+        for message in messages:
+            batch.append(fill_template(self.__model_name, message))
+        
+        with open(output_path, "w") as f:
+            for obj in batch:
+                f.write(json.dumps(obj) + "\n")
+
+        
+
 class DeepSeekModel(BaseModel):
     def __init__(self, model_name):
         super().__init__(
@@ -101,6 +118,33 @@ class GPTModel(BaseModel):
             base_url = cfg.openkey_openai_api_base,
             api_key = cfg.openkey_openai_api_key
         )
+    def upload_file(self, filepath):
+        batch_input_file = self._client.files.create(
+            file=open(filepath, "rb"),
+            purpose="batch"
+        )
+        return batch_input_file
+    
+    def run_batch(self, inputfile_id, output_path):
+        batch = self._client.batches.create(
+            input_file_id= inputfile_id,
+            endpoint="/v1/chat/completions",
+            completion_window="24h",
+            metadata={
+                "description": "test upload"
+            }
+        )
+        
+        while(batch["status"] != "completed"):
+            batch = self._client.batches.retrieve(batch["id"])            
+            time.sleep(60)
+            print(batch)
+        
+        file_response = self._client.files.content(batch["output_file_id"])
+
+        with open(output_path, "w") as f:
+            json.dump(file_response, f)
+
 
 class QwenModel(BaseModel):
     def __init__(self, model_name):
@@ -108,6 +152,14 @@ class QwenModel(BaseModel):
             model_name = model_name,
             base_url = cfg.qwen_api_base,
             api_key = cfg.qwen_api_key
+        )
+
+class GeminiModel(BaseModel):
+    def __init__(self, model_name):
+        super().__init__(
+            model_name = model_name,
+            base_url = cfg.gemini_api_base,
+            api_key = cfg.gemini_api_key
         )
         
 class ClaudeModel(BaseModel):
@@ -117,7 +169,7 @@ class ClaudeModel(BaseModel):
             base_url = cfg.claude_api_base,
             api_key = cfg.claude_api_key
         )
-        self.__client = Anthropic(api_key = cfg.claude_api_key, base_url = cfg.claude_api_base)
+        self._client = Anthropic(api_key = cfg.claude_api_key, base_url = cfg.claude_api_base)
         self.__sys_prompt = None
     
     def get_messages(self, user_prompt: str, sys_prompt: str = None) -> list:
@@ -131,7 +183,7 @@ class ClaudeModel(BaseModel):
             max_tokens = kwargs.pop("max_tokens", cfg.CLAUDE_DEFAULT_MAX_TOKENS)
             # system prompt in kwargs will override the default system prompt
             sys_prompt = kwargs.pop("system", self.__sys_prompt)
-            response = self.__client.messages.create(
+            response = self._client.messages.create(
                 model = self.get_model_name(),
                 messages = messages,
                 max_tokens = max_tokens,

@@ -9,6 +9,30 @@ from util.data_utils import DataUtils
 import constant
 from constant import MetricsKeywords as mk
 import config as cfg
+import copy
+
+
+def fill_template(model:str, message:list):
+    final_list = []
+    id = 0
+    
+    if "gpt" in model:
+        entry = copy.deepcopy(constant.GPT_BATCH_TEMPLATE)
+        entry["custom_id"] = id
+        entry["body"]["model"] = model
+        entry["body"]["messages"] = message
+        entry["body"]["max_tokens"] = cfg.DEFAULT_MAX_TOKENS
+
+    elif "anthropic" in model:
+        entry = constant.ANTHROPIC_BATCH_TEMPLATE.format(model_name = model, id = id, max_token = cfg.DEFAULT_MAX_TOKENS)
+    elif "gemini" in model:
+        entry = constant.GEMINI_BATCH_TEMPLATE.format(id = id, max_token = cfg.DEFAULT_MAX_TOKENS)
+    else:
+        raise Exception("There is no batch template for that model!")
+    id += 1
+    
+    return entry
+
 
 def add_item_id_for_detection_result(detection_result_file: str, cwe_id: str):
     clean_data = DataUtils.load_json(
