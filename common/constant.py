@@ -81,6 +81,14 @@ LOGS_DIR = str(Path(ROOT_DIR) / "log")
 MODEL_DIR = str(Path(ROOT_DIR) / "model")
 COMMON_DIR = str(Path(ROOT_DIR) / "common")
 
+#V2 file paths and names
+V2_TESTSET_DIR =  Path("partial") / "{benchmark}" / "3_enhanced_data" / "test_set"
+V2_ENHANCED_DATA_DIR = Path("partial") / "{benchmark}" / "3_enhanced_data"
+V2_SEARCH_RESULTS_DIR = Path("partial") / "{benchmark}" / "4_search_results"
+V2_RERANKED_DATA_DIR = Path("partial") / "{benchmark}" / "5_reranked_data"
+V2_DECISION_RESULTS_DIR = Path("partial") / "{benchmark}" / "6_decision_results"
+V2_LEARNED_RERANKER_DIR = Path("partial") / "{benchmark}" / "7_learned_reranker"
+
 
 VUL_KNOWLEDGE_PATTERN_FILE_NAME = "{model_name}_{cwe_id}_316_pattern_all"
 ES_INDEX_NAME_TEMPLATE = "gpt3_316{lower_cwe_id}_{lower_document_name}"

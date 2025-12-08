@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+from common import constant
 
 
 def parse_command_line_arguments():
@@ -27,7 +28,27 @@ def parse_command_line_arguments():
 
 def enrich_test(benchmark):
 
+    #load from partial/{benchmark}/3_enhanced_data/test_set
+
+    #create the prompts and make a list of prompts & id numbers
+
+    #call the a-sync openai system with gpt-3-turbo
+
+    #parse out the data
+
+    #save the data in a json object in partial/{benchmark}/3_enhanced_data
+
     return 0
+
+def load_elastic(benchmark):
+
+    #import the load function
+
+    #iterate through just like in ChatGPT_Extraction.py
+
+
+    return 0
+
 
 
 def search(benchmark):
@@ -43,6 +64,7 @@ def rerank(benchmark):
 def decision(benchmark):
 
     return 0
+
 
 if __name__ == '__main__':
 
