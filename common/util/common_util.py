@@ -12,24 +12,30 @@ import config as cfg
 import copy
 
 
-def fill_template(model:str, message:list):
+def fill_template(model:str, message:list, id:int):
     final_list = []
-    id = 0
     
     if "gpt" in model:
         entry = copy.deepcopy(constant.GPT_BATCH_TEMPLATE)
-        entry["custom_id"] = id
+        entry["custom_id"] = str(id)
         entry["body"]["model"] = model
         entry["body"]["messages"] = message
         entry["body"]["max_tokens"] = cfg.DEFAULT_MAX_TOKENS
 
     elif "anthropic" in model:
-        entry = constant.ANTHROPIC_BATCH_TEMPLATE.format(model_name = model, id = id, max_token = cfg.DEFAULT_MAX_TOKENS)
+        return 0
+
     elif "gemini" in model:
-        entry = constant.GEMINI_BATCH_TEMPLATE.format(id = id, max_token = cfg.DEFAULT_MAX_TOKENS)
+        entry = copy.deepcopy(constant.GEMINI_BATCH_TEMPLATE)
+        entry["id"] = str(id)
+        entry["max_token"] = cfg.DEFAULT_MAX_TOKENS
+        system_content = next( (m["content"] for m in message if m["role"] == "system"), None)
+        user_content = next( (m["content"] for m in message if m["role"] == "user"), None)
+        entry["user_message"] = user_content
+        entry["system_message"] = system_content
+        
     else:
         raise Exception("There is no batch template for that model!")
-    id += 1
     
     return entry
 

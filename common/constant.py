@@ -89,9 +89,9 @@ V2_RERANKED_DATA_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "5_reran
 V2_DECISION_RESULTS_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "6_decision_results")
 V2_LEARNED_RERANKER_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "7_learned_reranker")
 
-GPT_BATCH_TEMPLATE = {"custom_id": "{id}", "body": {"model": "{model_name}", "messages": "{message_list}","max_tokens": "{max_token}"}}
+GPT_BATCH_TEMPLATE = {"custom_id": "{id}", "method": "POST", "url": "/v1/chat/completions", "body": {"model": "{model_name}", "messages": [],"max_tokens": 0}}
 ANTHROPIC_BATCH_TEMPLATE = {"custom_id": "{id}", "params": {"model": "{model_name}", "messages": "{message_list}","max_tokens": "{max_token}"}}
-GEMINI_BATCH_TEMPLATE = {"key": "{id}", "request": { "contents": [{"parts": [{"text": "{user_message}" }], "role": "user"}, {"parts": [{"text": "{user_message}"}], "role": "system"}], "generationConfig": { "maxOutputTokens": "{max_token}" }}}
+GEMINI_BATCH_TEMPLATE = {"key": "{id}", "request": { "contents": [{"parts": [{"text": "{user_message}" }], "role": "user"}, {"parts": [{"text": "{system_message}"}], "role": "system"}], "generationConfig": {"maxOutputTokens": "{max_token}"}}}
 
 VUL_KNOWLEDGE_PATTERN_FILE_NAME = "{model_name}_{cwe_id}_316_pattern_all"
 ES_INDEX_NAME_TEMPLATE = "gpt3_316{lower_cwe_id}_{lower_document_name}"
