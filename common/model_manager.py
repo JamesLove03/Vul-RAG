@@ -298,31 +298,49 @@ class ClaudeModel(BaseModel):
             logging.disable(logging.NOTSET)
             return None
     
+    def upload_file(self, filepath):
+        client = self.get_client()
+
+        file = client.files.upload(
+            file = filepath,
+            purpose = "batch"
+        )
+        return file
+
     def run_batch(self, inputfile, output_path): #takes the location of our inputfile and creates our batch job
         client = self.get_client()
         
-        batch = client.messages.batches.create(
-            requests= inputfile.id,
-            endpoint="/v1/chat/completions",
+        batch = client.batches.create(
+            input_file_id= inputfile.id,
+            model=self.get_model_name,
             completion_window="24h",
             metadata={
                 "description": "test upload"
             }
         )
         
-        while(batch.status != "completed"):
+        while batch.status != "succeeded":
             if batch.status == "failed":
                 raise Exception(f"Batch Job Failed: {batch.errors}")
             time.sleep(60)
-            batch = client.batches.retrieve(batch.id)            
+            batch = client.batches.get(batch.id)            
         
-        file_response = client.files.content(batch.output_file_id)
+        file_response = client.files.get(batch.output_file_id)
 
         with open(output_path, "w") as f:
-            f.write(file_response.read().decode("utf-8"))
+            f.write(file_response.data.decode("utf-8"))
 
-        data = json.loads(batch)
-        return data["usage"]["input_tokens"], data["usage"]["output_tokens"]
+        total_input = 0
+        total_output = 0
+
+        for line in file_response.data.decode("utf-8").strip().split("\n"):
+            item = json.loads(line)
+            tokens = item.get("completion", {}).get("tokens", {})
+            total_input += tokens.get("input_tokens", 0)
+            total_output += tokens.get("output_tokens", 0)
+
+        return total_input, total_output
+
 
 class ModelManager:
     __models = {

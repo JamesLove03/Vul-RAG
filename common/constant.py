@@ -90,7 +90,7 @@ V2_DECISION_RESULTS_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "6_de
 V2_LEARNED_RERANKER_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "7_learned_reranker")
 
 GPT_BATCH_TEMPLATE = {"custom_id": "{id}", "method": "POST", "url": "/v1/chat/completions", "body": {"model": "{model_name}", "messages": [],"max_tokens": 0}}
-ANTHROPIC_BATCH_TEMPLATE = {"custom_id": "{id}", "params": {"model": "{model_name}", "messages": "{message_list}","max_tokens": "{max_token}"}}
+ANTHROPIC_BATCH_TEMPLATE = {"custom_id": "", "params": {"model": "", "messages": "{message_list}","max_tokens": 0}}
 GEMINI_BATCH_TEMPLATE = {"key": "", "request": { "model": "", "system_instruction": {"parts": [{ "text": "" }] }, "contents": [{"parts": [{"text": "" }], "role": "user"}], "generationConfig": {"maxOutputTokens": 0}}}
 
 VUL_KNOWLEDGE_PATTERN_FILE_NAME = "{model_name}_{cwe_id}_316_pattern_all"
@@ -111,6 +111,16 @@ BASELINE_PROMPT_TYPE_DESCRIPTION_MAP = {
     2: "no_knowledge_cot",
     3: "no_knowledge_advanced_cot",
     4: "cwe_description"
+}
+
+LOG_FORMAT = {
+    "start_time": "",
+    "end_time": "",
+    "run_time": "",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "model/method": "",
+    "explanation": ""
 }
 
 CWE_DESCRIPTIONS = {

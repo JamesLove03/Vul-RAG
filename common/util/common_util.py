@@ -23,11 +23,12 @@ def fill_template(model:str, message:list, id:int):
         entry["body"]["max_tokens"] = cfg.DEFAULT_MAX_TOKENS
 
     elif "anthropic" in model:
+        entry = copy.deepcopy(constant.ANTHROPIC_BATCH_TEMPLATE)
+        entry["custom_id"] = str(id)
+        entry["params"]["model"] = model
+        entry["params"]["messages"] = message
+        entry["params"]["max_tokens"] = cfg.DEFAULT_MAX_TOKENS
         
-        
-
-        final_list = Request(entry)
-
     elif "gemini" in model:
         entry = copy.deepcopy(constant.GEMINI_BATCH_TEMPLATE)
         entry["key"] = str(id)
@@ -41,6 +42,36 @@ def fill_template(model:str, message:list, id:int):
         raise Exception("There is no batch template for that model!")
     
     return entry
+
+
+def update_log(log_dir: str, item_key: str, **kwargs):
+    path = Path(log_dir) / "log.json"
+
+    if not path.exists():
+        with path.open("w") as f:
+            json.dump({}, f, indent=2)
+
+    with path.open("r") as f:
+        data = json.load(f)
+
+    if item_key not in data:
+        data[item_key] = LOG_FORMAT.copy()
+
+    for key, value in kwargs.items()
+        if key in data[item_key]
+            data[item_key][key] = value
+    
+    with path.open("w") as f:
+        json.dump(data, f, indent=2)
+
+    # EXAMPLE USAGE
+    # update_log(
+    # "logs/runtime.json",
+    # "Item1",
+    # start_time="2025-12-12T10:00:00",
+    # input_tokens=1500,
+    # explanation="First run of the day"
+    # )
 
 
 def add_item_id_for_detection_result(detection_result_file: str, cwe_id: str):
