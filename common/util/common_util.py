@@ -10,7 +10,7 @@ import constant
 from constant import MetricsKeywords as mk
 import config as cfg
 import copy
-
+from anthropic.types.messages.batch_create_params import Request
 
 def fill_template(model:str, message:list, id:int):
     final_list = []
@@ -23,16 +23,19 @@ def fill_template(model:str, message:list, id:int):
         entry["body"]["max_tokens"] = cfg.DEFAULT_MAX_TOKENS
 
     elif "anthropic" in model:
-        return 0
+        
+        
+
+        final_list = Request(entry)
 
     elif "gemini" in model:
         entry = copy.deepcopy(constant.GEMINI_BATCH_TEMPLATE)
-        entry["id"] = str(id)
-        entry["max_token"] = cfg.DEFAULT_MAX_TOKENS
-        system_content = next( (m["content"] for m in message if m["role"] == "system"), None)
+        entry["key"] = str(id)
+        entry["request"]["generationConfig"]["maxOutputTokens"] = cfg.DEFAULT_MAX_TOKENS
         user_content = next( (m["content"] for m in message if m["role"] == "user"), None)
-        entry["user_message"] = user_content
-        entry["system_message"] = system_content
+        entry["request"]["contents"][0]["parts"][0]["text"] = user_content
+        entry["request"]["model"] = "models/" + model
+        entry["request"]["system_instruction"]["parts"][0]["text"] = constant.DEFAULT_SYS_PROMPT
         
     else:
         raise Exception("There is no batch template for that model!")

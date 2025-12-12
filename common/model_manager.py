@@ -11,6 +11,9 @@ try:
 except:
     logging.warning("Anthropic package is not installed. Please install it to use Claude model.")
 import os
+from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
+import constant
+
 
 class BaseModel:
     def __init__(self, model_name, base_url, api_key = None):
@@ -200,28 +203,64 @@ class GeminiModel(BaseModel):
         return batch_input_file
     
     def run_batch(self, inputfile, output_path): #runs the batch and writes the output. Also returns the Input and Output Tokens 
-        model_name = self.get_model_name()
+        
+        model_name = "models/" + self.get_model_name()
         client = self.get_client()
 
         batch = client.batches.create(
             model = model_name,
             src= inputfile.name
-            )
+        )
+        batch_name = batch.name
         
-        while(batch.state.name != "JOB_STATE_SUCCEEDED"):
-            if batch.state.name == "JOB_STATE_FAILED":
-                raise Exception(f"Batch Job Failed: {batch.error}")
+        completed_states = set([
+            'JOB_STATE_SUCCEEDED',
+            'JOB_STATE_FAILED',
+            'JOB_STATE_CANCELLED',
+            'JOB_STATE_EXPIRED',
+        ])
+        batch_job = client.batches.get(name=batch_name)
+
+        while batch_job.state.name not in completed_states: #poll here
+            print(f"Current state: {batch_job.state.name}")
             time.sleep(60)
-            batch = client.batches.get(name=batch.name)            
-            print(batch)
+            batch_job = client.batches.get(name=batch_name)
+
+        print(f"Job finished with state: {batch_job.state.name}")
+        if batch_job.state.name == 'JOB_STATE_FAILED': #if failed raise an exception
+            if batch_job.error:
+                print(f"Error: {batch_job.error}")
+            raise Exception(f"Error: {batch_job.error}")
         
-        file_content_bytes = client.files.download(batch.dest.file_name)
-        file_content = file_content_bytes.decode('utf-8')
+        elif batch_job.state.name == 'JOB_STATE_SUCCEEDED': # if suceeds write to output file
+            result_file_name = batch_job.dest.file_name
+            print("Downloading result file content...")
+            file_content = client.files.download(file=result_file_name)
+            file_decoded = file_content.decode('utf-8')
 
-        with open(output_path, "w") as f:
-            f.write(file_content)
+            with open(output_path, "w") as f:
+                f.write(file_decoded)
 
-        return 
+            input_tok = 0
+            output_tok = 0
+            for line in file_decoded.strip().split('\n'):
+                data = json.loads(line)
+                metadata = data.get('response', {}).get('usageMetadata', {})
+                prompt_tokens = metadata.get('promptTokenCount', 0)
+                candidate_tokens = metadata.get('candidatesTokenCount', 0)
+            
+                input_tok += prompt_tokens
+                output_tok += candidate_tokens
+
+            return input_tok, output_tok
+        
+        else:
+            print(batch_job.state.name)
+        
+        if batch_job.error:
+            print(f"Error: {batch_job.error}")
+
+        return 0, 0
 
         
 class ClaudeModel(BaseModel):
@@ -258,6 +297,32 @@ class ClaudeModel(BaseModel):
             logging.error(f"Error while calling {self.get_model_name()} API: {e}")
             logging.disable(logging.NOTSET)
             return None
+    
+    def run_batch(self, inputfile, output_path): #takes the location of our inputfile and creates our batch job
+        client = self.get_client()
+        
+        batch = client.messages.batches.create(
+            requests= inputfile.id,
+            endpoint="/v1/chat/completions",
+            completion_window="24h",
+            metadata={
+                "description": "test upload"
+            }
+        )
+        
+        while(batch.status != "completed"):
+            if batch.status == "failed":
+                raise Exception(f"Batch Job Failed: {batch.errors}")
+            time.sleep(60)
+            batch = client.batches.retrieve(batch.id)            
+        
+        file_response = client.files.content(batch.output_file_id)
+
+        with open(output_path, "w") as f:
+            f.write(file_response.read().decode("utf-8"))
+
+        data = json.loads(batch)
+        return data["usage"]["input_tokens"], data["usage"]["output_tokens"]
 
 class ModelManager:
     __models = {

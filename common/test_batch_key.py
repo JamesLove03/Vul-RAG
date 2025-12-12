@@ -4,14 +4,11 @@ import model_manager
 from pathlib import Path
 import json
 import pdb
-
-# Replace with your actual key or set it via environment variable
-api_key = cfg.openkey_openai_api_key
-api_base = cfg.openkey_openai_api_base
+import asyncio
 
 try:
     
-    model = model_manager.GPTModel("gpt-3.5-turbo")
+    model = model_manager.GeminiModel("gemini-2.0-flash-lite")
 
     message1 = model.get_messages("recite a poem for me", "You are a beautiful poet")
     message2 = model.get_messages("recite a sad poem for me", "You are a beautiful poet")
