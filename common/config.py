@@ -52,7 +52,7 @@ qwen_api_key = DataUtils.load_data_from_pickle_file(PathUtil.api_keys_data("qwen
 
 
 # claude_api_base = "https://api.aiproxy.io"
-claude_api_base = "https://api.openai-proxy.org/anthropic"
+claude_api_base = "https://api.anthropic.com"
 claude_api_key = DataUtils.load_data_from_pickle_file(PathUtil.api_keys_data("claude_api_key", "pkl"))
 
 gemini_api_base = "https://generativelanguage.googleapis.com/v1beta/models"

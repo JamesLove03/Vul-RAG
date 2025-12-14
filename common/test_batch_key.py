@@ -1,14 +1,14 @@
-import openai
 import config as cfg
-import model_manager
+from model_manager import ModelManager
 from pathlib import Path
 import json
 import pdb
-import asyncio
+import traceback
+import constant
 
 try:
     
-    model = model_manager.GeminiModel("gemini-2.0-flash-lite")
+    model = ModelManager.get_model_instance("claude-haiku-4-5-20251001")
 
     message1 = model.get_messages("recite a poem for me", "You are a beautiful poet")
     message2 = model.get_messages("recite a sad poem for me", "You are a beautiful poet")
@@ -28,5 +28,5 @@ try:
     print(f"Input tokens: {inputtok}, Outpot tokens: {outputtok}")
 
 except Exception as e:
-    print("⚠️ An unexpected error occurred.")
-    print(e)
+    traceback.print_exc()
+    raise

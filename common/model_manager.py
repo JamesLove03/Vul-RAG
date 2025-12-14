@@ -12,6 +12,8 @@ except:
     logging.warning("Anthropic package is not installed. Please install it to use Claude model.")
 import os
 from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
+from anthropic.types.messages.batch_create_params import Request
+
 import constant
 
 
@@ -270,13 +272,13 @@ class ClaudeModel(BaseModel):
             base_url = cfg.claude_api_base,
             api_key = cfg.claude_api_key
         )
-        self._set_client = Anthropic(api_key = cfg.claude_api_key, base_url = cfg.claude_api_base)
+        self._set_client(Anthropic(api_key = cfg.claude_api_key, base_url = cfg.claude_api_base))
         self.__sys_prompt = None
     
-    def get_messages(self, user_prompt: str, sys_prompt: str = None) -> list:
-        messages = [{"role": "user", "content": user_prompt}]
-        self.__sys_prompt = sys_prompt
-        return messages
+    # def get_messages(self, user_prompt: str, sys_prompt: str = None) -> list:
+    #     messages = [{"role": "user", "content": user_prompt}]
+    #     self.__sys_prompt = sys_prompt
+    #     return messages
 
     def get_response_with_messages(self, messages: list, **kwargs) -> str:
         logging.disable(logging.INFO)
@@ -299,45 +301,64 @@ class ClaudeModel(BaseModel):
             return None
     
     def upload_file(self, filepath):
-        client = self.get_client()
+        batch_requests = []
 
-        file = client.files.upload(
-            file = filepath,
-            purpose = "batch"
-        )
-        return file
+        with open(filepath, "r", encoding="utf-8") as f:
+            for line in f:
+                data = json.loads(line)
+
+                req = Request(
+                    custom_id=data["custom_id"],
+                    params=MessageCreateParamsNonStreaming(
+                        model=data["params"]["model"],
+                        max_tokens=data["params"]["max_tokens"],
+                        messages=data["params"]["messages"],
+                    )
+                )
+
+                batch_requests.append(req)
+
+        return batch_requests
 
     def run_batch(self, inputfile, output_path): #takes the location of our inputfile and creates our batch job
         client = self.get_client()
         
-        batch = client.batches.create(
-            input_file_id= inputfile.id,
-            model=self.get_model_name,
-            completion_window="24h",
-            metadata={
-                "description": "test upload"
-            }
+        batch = client.messages.batches.create(
+            requests = inputfile
         )
         
-        while batch.status != "succeeded":
-            if batch.status == "failed":
-                raise Exception(f"Batch Job Failed: {batch.errors}")
+        while batch.processing_status != "ended":
             time.sleep(60)
-            batch = client.batches.get(batch.id)            
+            batch = client.messages.batches.retrieve(batch.id)            
         
-        file_response = client.files.get(batch.output_file_id)
-
-        with open(output_path, "w") as f:
-            f.write(file_response.data.decode("utf-8"))
-
+        file_response = client.messages.batches.results(batch.id)
         total_input = 0
         total_output = 0
+        all_results = []
 
-        for line in file_response.data.decode("utf-8").strip().split("\n"):
-            item = json.loads(line)
-            tokens = item.get("completion", {}).get("tokens", {})
-            total_input += tokens.get("input_tokens", 0)
-            total_output += tokens.get("output_tokens", 0)
+
+        for result in file_response:
+            match result.result.type:
+                case "succeeded":
+                    total_input += result.result.message.usage.input_tokens
+                    total_output += result.result.message.usage.output_tokens
+                    all_results.append(result.model_dump())
+                    
+                case "errored":
+                    if result.result.error.type == "invalid_request":
+                        # Request body must be fixed before re-sending request
+                        print(f"Validation error {result.custom_id}")
+                    else:
+                        # Request can be retried directly
+                        print(f"Server error {result.result.error}")
+                case "expired":
+                    print(f"Request expired {result.custom_id}")
+                case _:
+                    print(f"Unhandled result type: {result.result.type}")
+        
+        with open(output_path, "w", encoding="utf-8") as f:
+            for item in all_results:
+                f.write(json.dumps(item) + "\n")
 
         return total_input, total_output
 
@@ -348,6 +369,7 @@ class ModelManager:
         "deepseek": DeepSeekModel,
         "gpt": GPTModel,
         "claude": ClaudeModel, 
+        "gemini": GeminiModel
     }
 
     __instances_cache = {}
@@ -363,6 +385,8 @@ class ModelManager:
             model_name_kw = "gpt"
         elif "claude" in model_name.lower():  
             model_name_kw = "claude"
+        elif "gemini" in model_name.lower():
+            model_name_kw = "gemini"
         
         if model_name_kw not in cls.__models:
             raise ValueError("Unsupported model name")

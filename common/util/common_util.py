@@ -2,7 +2,6 @@ import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-import config
 import logging
 from util.path_util import PathUtil
 from util.data_utils import DataUtils
@@ -11,6 +10,8 @@ from constant import MetricsKeywords as mk
 import config as cfg
 import copy
 from anthropic.types.messages.batch_create_params import Request
+import json
+from pathlib import Path
 
 def fill_template(model:str, message:list, id:int):
     final_list = []
@@ -22,12 +23,16 @@ def fill_template(model:str, message:list, id:int):
         entry["body"]["messages"] = message
         entry["body"]["max_tokens"] = cfg.DEFAULT_MAX_TOKENS
 
-    elif "anthropic" in model:
+    elif "claude" in model:
+        user_messages = [m for m in message if m.get("role") == "user"]
+        system_prompt = next( (m["content"] for m in message if m["role"] == "system"), "")
+
         entry = copy.deepcopy(constant.ANTHROPIC_BATCH_TEMPLATE)
         entry["custom_id"] = str(id)
         entry["params"]["model"] = model
-        entry["params"]["messages"] = message
+        entry["params"]["messages"] = user_messages
         entry["params"]["max_tokens"] = cfg.DEFAULT_MAX_TOKENS
+        entry["params"]["system"] = system_prompt
         
     elif "gemini" in model:
         entry = copy.deepcopy(constant.GEMINI_BATCH_TEMPLATE)
@@ -55,10 +60,10 @@ def update_log(log_dir: str, item_key: str, **kwargs):
         data = json.load(f)
 
     if item_key not in data:
-        data[item_key] = LOG_FORMAT.copy()
+        data[item_key] = constant.LOG_FORMAT.copy()
 
-    for key, value in kwargs.items()
-        if key in data[item_key]
+    for key, value in kwargs.items():
+        if key in data[item_key]:
             data[item_key][key] = value
     
     with path.open("w") as f:
