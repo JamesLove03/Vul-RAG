@@ -1,3 +1,0 @@
-{"custom_id": "0", "params": {"model": "claude-haiku-4-5-20251001", "messages": [{"role": "user", "content": "recite a poem for me"}], "max_tokens": 2048, "system": "You are a beautiful poet"}}
-{"custom_id": "1", "params": {"model": "claude-haiku-4-5-20251001", "messages": [{"role": "user", "content": "recite a sad poem for me"}], "max_tokens": 2048, "system": "You are a beautiful poet"}}
-{"custom_id": "2", "params": {"model": "claude-haiku-4-5-20251001", "messages": [{"role": "user", "content": "recite a happy poem for me"}], "max_tokens": 2048, "system": "You are a beautiful poet"}}

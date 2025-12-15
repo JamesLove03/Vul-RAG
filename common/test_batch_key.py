@@ -8,7 +8,7 @@ import constant
 
 try:
     
-    model = ModelManager.get_model_instance("claude-haiku-4-5-20251001")
+    model = ModelManager.get_model_instance("gemini-2.5-flash")
 
     message1 = model.get_messages("recite a poem for me", "You are a beautiful poet")
     message2 = model.get_messages("recite a sad poem for me", "You are a beautiful poet")
@@ -26,6 +26,8 @@ try:
     inputtok, outputtok = model.run_batch(file, str(output_dir))
 
     print(f"Input tokens: {inputtok}, Outpot tokens: {outputtok}")
+
+    print(model.read(output_dir))
 
 except Exception as e:
     traceback.print_exc()

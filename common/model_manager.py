@@ -176,6 +176,30 @@ class GPTModel(BaseModel):
         data = json.loads(batch)
         return data["usage"]["input_tokens"], data["usage"]["output_tokens"]
 
+    def read(self, filepath):
+        results = {}
+
+        with open(filepath, "r", encoding="utf-8") as f:
+            for line in f:
+                item = json.loads(line)
+
+                custom_id = item.get("custom_id")
+                choices = (
+                    item.get("response", {})
+                        .get("body", {})
+                        .get("choices", [])
+                )
+
+                text = ""
+                if choices:
+                    text = choices[0].get("message", {}).get("content", "")
+
+                if custom_id is not None:
+                    results[custom_id] = {
+                        "content": text                            
+                    }
+
+        return results
 
 class QwenModel(BaseModel):
     def __init__(self, model_name):
@@ -264,7 +288,37 @@ class GeminiModel(BaseModel):
 
         return 0, 0
 
-        
+    def read(self, filepath):
+        results = {}
+
+        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                item = json.loads(line)
+
+                key = item.get("key")
+                content_parts = (
+                    item.get("response", {})
+                        .get("candidates", [{}])[0]
+                        .get("content", {})
+                        .get("parts", [])
+                )
+
+                text = "".join(
+                    part.get("text", "")
+                    for part in content_parts
+                    if "text" in part
+                )
+
+                if key is not None:
+                    results[key] = {
+                        "content": {
+                            "text": text
+                        }
+                    }
+
+        return results
+
+
 class ClaudeModel(BaseModel):
     def __init__(self, model_name):
         super().__init__(
@@ -361,6 +415,34 @@ class ClaudeModel(BaseModel):
                 f.write(json.dumps(item) + "\n")
 
         return total_input, total_output
+    
+    def read(self, filepath):
+        results = {}
+
+        with open(filepath, "r", encoding="utf-8") as f:
+            for line in f:
+                item = json.loads(line)
+
+                custom_id = item.get("custom_id")
+                content_blocks = (
+                    item.get("result", {})
+                        .get("message", {})
+                        .get("content", [])
+                )
+
+                text = "".join(
+                    block.get("text", "")
+                    for block in content_blocks
+                    if block.get("type") == "text"
+                )
+
+                if custom_id is not None:
+                    results[custom_id] = {
+                        "content": text
+                    }
+
+        return results
+
 
 
 class ModelManager:
