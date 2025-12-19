@@ -13,6 +13,53 @@ from anthropic.types.messages.batch_create_params import Request
 import json
 from pathlib import Path
 
+
+def merge_batch_logs(batch_dir, prev_batch, model_name):
+    entry = copy.deepcopy(constant.BATCH_LOG_FORMAT)
+    input_tok = 0
+    output_tok = 0
+    total_items = 0
+    run_time = 0
+
+    for file in Path(batch_dir).iterdir():
+        with file.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        input_tok += data["input_tokens"] 
+        output_tok += data["output_tokens"]
+        total_items += data["total_batch_items"]
+        run_time += data["runtime"]
+
+    entry["custom_id"] = "Summarized Log Files"
+    entry["input_tokens"] = input_tok
+    entry["output_tokens"] = output_tok
+    entry["total_batch_items"] = total_items
+    entry["runtime"] = run_time
+    entry["model_name"] = model_name
+    entry["prev_log"] = prev_batch
+
+    output_path = Path(batch_dir) / "final_log.json" 
+    with output_path.open("w", encoding="utf-8") as f:
+        json.dump(entry, f)
+        f.write("\n")
+
+
+def fill_batch_log(id, inp, out, num_items, modelname, prev_path, output_path, runtime):
+    entry = copy.deepcopy(constant.BATCH_LOG_FORMAT)
+    entry["custom_id"] = id
+    entry["input_tokens"] = inp
+    entry["output_tokens"] = out
+    entry["total_batch_items"] = num_items
+    entry["model_name"] = modelname
+    entry["prev_log"] = prev_path
+    entry["batch_runtime"] = runtime
+    
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with output_path.open("a", encoding="utf-8") as f:
+        json.dump(entry, f)
+        f.write("\n")
+
 def fill_template(model:str, message:list, id:int):
     final_list = []
     

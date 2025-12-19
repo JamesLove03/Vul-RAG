@@ -482,8 +482,6 @@ class VulRAGDetector:
 
         return combined
 
-    #def updated_retrieve(self, )
-
     def retrieve_learned_knowledge(self, cwe_name, code_snippet, purpose, function, top_N=10):
 
         #generate embeddings for passed queries

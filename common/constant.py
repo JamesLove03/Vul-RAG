@@ -56,7 +56,7 @@ class MetricsKeywords(Enum):
     PR = "Presence Rate"
     CLR = "Correct Lib Decision Rate"
     
-    
+BATCH_LOG_FORMAT = {"custom_id": "", "runtime": 0, "input_tokens": 0, "output_tokens": 0, "total_batch_items": 0, "model_name": "", "prev_log": ""}
 
 class KnowledgeDocumentName(Enum):
     PRECONDITIONS = "preconditions_for_vulnerability"
@@ -88,6 +88,9 @@ V2_SEARCH_RESULTS_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "4_sear
 V2_RERANKED_DATA_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "5_reranked_data")
 V2_DECISION_RESULTS_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "6_decision_results")
 V2_LEARNED_RERANKER_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "7_learned_reranker")
+
+BATCH_INPUT_NAME = "batch_input_file{cwe}.json"
+BATCH_OUTPUT_NAME = "batch_output_file{cwe}.json"
 
 GPT_BATCH_TEMPLATE = {"custom_id": "{id}", "method": "POST", "url": "/v1/chat/completions", "body": {"model": "{model_name}", "messages": [],"max_tokens": 0}}
 ANTHROPIC_BATCH_TEMPLATE = {"custom_id": "", "params": {"model": "", "messages": "{message_list}","max_tokens": 0}}

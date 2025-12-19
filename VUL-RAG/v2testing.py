@@ -3,12 +3,22 @@ import json
 import sys
 import argparse
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+import common.config as cfg
+import logging
+from datetime import datetime
 
+from tqdm import tqdm
 from common import constant
 from pathlib import Path
 from common.util.path_util import PathUtil
 from common.util.data_utils import DataUtils
 from components.knowledge_extractor import KnowledgeExtractor
+from common.util.track_util import Tracker
+from components.VulRAG import VulRAGDetector
+from common import common_prompt
+from common.model_manager import ModelManager
+from common.util.common_util import fill_batch_log, merge_batch_logs
+
 
 
 def get_cwes(benchmark): #returns a list of CWE values
@@ -44,36 +54,132 @@ def parse_command_line_arguments():
         help = "Select the model to run on"
     )
 
+    parser.add_argument(
+        '--resume',
+        action = 'store_true',
+        help = 'Whether to resume from a checkpoint.'
+    )
+
     args = parser.parse_args()
 
     return args
 
 
-def enrich_test(benchmark, model):
+def enrich_test(benchmark, model, resume):
 
     #load from partial/{benchmark}/3_enhanced_data/test_set
     cwe_list = get_cwes(benchmark)
-
-    KnowledgeE = KnowledgeExtractor(model_name = args.model, V2=True)
+    testset_dir = Path(constant.V2_TESTSET_DIR.format(benchmark=benchmark))
+    enhanced_dir = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark))
+    
 
     for cwe in cwe_list:
+        start_time = datetime.now()
 
-        KnowledgeE.extract_knowledge_from_cwe(
-                CWE_name = cwe,
-                extract_only_once = True,
-                resume = True,
-                model_settings_dict = None
-            )
+        input_filename = constant.TEST_DATA_FILE_NAME.format(
+                model_name = cfg.DEFAULT_BEHAVIOR_SUMMARY_MODEL,
+                cwe_id = cwe
+            ) + ".json"
+        input_path = testset_dir / input_filename
+
+        output_filename = constant.VULRAG_DETECTION_RESULT_FILE_NAME.format(
+            cwe_id = cwe, 
+            model_name = model,
+            summary_model_name = model,
+            model_settings = ""
+        ) + ".json"
+        output_path = enhanced_dir / output_filename
+
+        checkpoint_path = PathUtil.checkpoint_data(output_filename, "pkl")
+
+        cve_list = []
+        test_clean_data = DataUtils.load_json(input_path)
+        cve_list = test_clean_data
+
+        logging.info(f"Start detecting {len(cve_list)} samples for {cwe}...")
+
+        vul_list = []
+        non_vul_list = []
+        ckpt_cve_list = []
+
+        model_instance = ModelManager.get_model_instance(model)
+
+        if resume:
+            if os.path.exists(checkpoint_path):
+                ckpt_cve_list = list(DataUtils.load_data_from_pickle_file(checkpoint_path))
+                if os.path.exists(output_path):
+                    data = DataUtils.load_json(output_path)
+                    vul_list = data['vul_data']
+                    non_vul_list = data['non_vul_data']
+            else:
+                # to avoid overwriting the existing output file
+                raise FileNotFoundError(f"Checkpoint file {checkpoint_path} not found.")
+        try:
+            custom_non_vul_ids = []
+            custom_vul_ids = []
+            batch_input_path = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark)) / "batch_input_file" / constant.BATCH_INPUT_NAME.format(cwe=cwe)
+            batch_input_path.parent.mkdir(parents=True, exist_ok=True)  # create subfolders if needed
+
+            batch_output_path = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark)) /constant.BATCH_OUTPUT_NAME.format(cwe=cwe)
+
+            for cve_item in tqdm(cve_list):
+                if str(cve_item['id']) + 'P' in ckpt_cve_list or str(cve_item['id']) + 'F' in ckpt_cve_list:
+                    print("Checkpoint issue")
+                    continue
+                
+                #Generate messages for purpose and function as well as storing customids
+                purpose_prompt, function_prompt = common_prompt.ExtractionPrompt.generate_extraction_prompt_for_vulrag(cve_item['code_before_change'])
+                purpose_messages = model_instance.get_messages(purpose_prompt, constant.DEFAULT_SYS_PROMPT)
+                function_messages = model_instance.get_messages(function_prompt, constant.DEFAULT_SYS_PROMPT)
+                vul_list.append(purpose_messages)
+                custom_vul_ids.append(str(cve_item['id']) + 'P')
+                vul_list.append(function_messages)
+                custom_vul_ids.append(str(cve_item['id']) + 'F')
+
+                purpose_prompt, function_prompt = common_prompt.ExtractionPrompt.generate_extraction_prompt_for_vulrag(cve_item['code_after_change'])
+                purpose_messages = model_instance.get_messages(purpose_prompt, constant.DEFAULT_SYS_PROMPT)
+                function_messages = model_instance.get_messages(function_prompt, constant.DEFAULT_SYS_PROMPT)
+                non_vul_list.append(purpose_messages)
+                custom_vul_ids.append(str(cve_item['id']) + 'P')
+                non_vul_list.append(function_messages)
+                custom_vul_ids.append(str(cve_item['id']) + 'F')
+
+                ckpt_cve_list.append(str(cve_item['id']))
+                DataUtils.save_json(batch_input_path, {"vul_data": vul_list, "non_vul_data": non_vul_list})
             
-    #create the prompts and make a list of prompts & id numbers
+        except Exception as e:
+            DataUtils.write_data_to_pickle_file(ckpt_cve_list, checkpoint_path)
+            logging.error(f"CVE ID: {cve_item['cve_id']}")
+            logging.error(f"Error: {e}")
+            logging.error(f"Detection for {cwe} failed. Checkpoint saved.")
 
-    #call the a-sync openai system with gpt-3-turbo
+        combined_list = []
+        combined_list.append(vul_list)
+        combined_list.append(non_vul_list)
+        combined_ids = []
+        combined_ids.append(custom_vul_ids)
+        combined_ids.append(custom_non_vul_ids)
 
-    #parse out the data
+        if len(combined_list) != len(combined_ids):
+            raise Exception(f"Error in the amount of ids: Items {len(combined_list)}, Custom IDs {len(combined_ids)}")
+        
+        model_instance.create_batch_file(combined_list, batch_input_path, combined_ids)
 
-    #save the data in a json object in partial/{benchmark}/3_enhanced_data
+        batch_file = model_instance.upload_file(batch_input_path)
 
-    return 0
+        input_tok, output_tok = model_instance.run_batch(batch_file, batch_output_path)
+        
+        end_time = datetime.now()
+        runtime = ((end_time - start_time).total_seconds()) / 60 # gets runtime in minutes
+
+        batch_log_path = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark)) / "metrics" / f"{cwe}log.json"
+        batch_log_path.parent.mkdir(parents=True, exist_ok=True)
+
+        fill_batch_log(f"Enhancing testset data for {cwe}", input_tok, output_tok, len(custom_ids), model_instance.get_model_name(), None, batch_log_path, runtime)
+
+    print("All cwes completed")
+    merge_batch_logs(Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark)) / "metrics", None, model_instance.get_model_name())
+
 
 def load_elastic(benchmark):
 
@@ -110,16 +216,16 @@ if __name__ == '__main__':
     
 
     if args.action == 'enrich_test':
-        enrich_test(args.benchmark, args.model)
+        enrich_test(args.benchmark, args.model, args.resume)
 
     elif args.action == 'search':
-        search(args.benchmark)
+        search(args.benchmark, args.model, args.resume)
 
     elif args.action == 'rerank':
-        rerank(args.benchmark)
+        rerank(args.benchmark, args.resume)
 
     elif args.action == 'decision':
-        decision(args.benchmark, args.model)
+        decision(args.benchmark, args.model, args.resume)
 
     else:
         raise Exception("There is an incorrect action verb here")
