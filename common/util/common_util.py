@@ -27,13 +27,13 @@ def merge_batch_logs(batch_dir, prev_batch, model_name):
         input_tok += data["input_tokens"] 
         output_tok += data["output_tokens"]
         total_items += data["total_batch_items"]
-        run_time += data["runtime"]
+        run_time += data["batch_runtime"]
 
     entry["custom_id"] = "Summarized Log Files"
     entry["input_tokens"] = input_tok
     entry["output_tokens"] = output_tok
     entry["total_batch_items"] = total_items
-    entry["runtime"] = run_time
+    entry["batch_runtime"] = run_time
     entry["model_name"] = model_name
     entry["prev_log"] = prev_batch
 

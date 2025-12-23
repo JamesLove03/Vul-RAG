@@ -5,6 +5,7 @@ import argparse
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 import common.config as cfg
 import logging
+import pdb
 from datetime import datetime
 
 from tqdm import tqdm
@@ -74,6 +75,7 @@ def enrich_test(benchmark, model, resume):
     
 
     for cwe in cwe_list:
+        print(f"Begin working on {cwe}")
         start_time = datetime.now()
 
         input_filename = constant.TEST_DATA_FILE_NAME.format(
@@ -82,15 +84,11 @@ def enrich_test(benchmark, model, resume):
             ) + ".json"
         input_path = testset_dir / input_filename
 
-        output_filename = constant.VULRAG_DETECTION_RESULT_FILE_NAME.format(
-            cwe_id = cwe, 
-            model_name = model,
-            summary_model_name = model,
-            model_settings = ""
-        ) + ".json"
-        output_path = enhanced_dir / output_filename
+        batch_output_filename = constant.BATCH_OUTPUT_NAME.format(cwe=cwe)
+        batch_output_path = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark)) / batch_output_filename
 
-        checkpoint_path = PathUtil.checkpoint_data(output_filename, "pkl")
+
+        checkpoint_path = PathUtil.checkpoint_data(batch_output_filename, "pkl")
 
         cve_list = []
         test_clean_data = DataUtils.load_json(input_path)
@@ -107,8 +105,8 @@ def enrich_test(benchmark, model, resume):
         if resume:
             if os.path.exists(checkpoint_path):
                 ckpt_cve_list = list(DataUtils.load_data_from_pickle_file(checkpoint_path))
-                if os.path.exists(output_path):
-                    data = DataUtils.load_json(output_path)
+                if os.path.exists(batch_output_path):
+                    data = DataUtils.load_json(batch_output_path)
                     vul_list = data['vul_data']
                     non_vul_list = data['non_vul_data']
             else:
@@ -132,17 +130,17 @@ def enrich_test(benchmark, model, resume):
                 purpose_messages = model_instance.get_messages(purpose_prompt, constant.DEFAULT_SYS_PROMPT)
                 function_messages = model_instance.get_messages(function_prompt, constant.DEFAULT_SYS_PROMPT)
                 vul_list.append(purpose_messages)
-                custom_vul_ids.append(str(cve_item['id']) + 'P')
+                custom_vul_ids.append(str(cve_item['id']) + 'P' + 'V')
                 vul_list.append(function_messages)
-                custom_vul_ids.append(str(cve_item['id']) + 'F')
+                custom_vul_ids.append(str(cve_item['id']) + 'F' + 'V')
 
                 purpose_prompt, function_prompt = common_prompt.ExtractionPrompt.generate_extraction_prompt_for_vulrag(cve_item['code_after_change'])
                 purpose_messages = model_instance.get_messages(purpose_prompt, constant.DEFAULT_SYS_PROMPT)
                 function_messages = model_instance.get_messages(function_prompt, constant.DEFAULT_SYS_PROMPT)
                 non_vul_list.append(purpose_messages)
-                custom_vul_ids.append(str(cve_item['id']) + 'P')
+                custom_non_vul_ids.append(str(cve_item['id']) + 'P' + 'N')
                 non_vul_list.append(function_messages)
-                custom_vul_ids.append(str(cve_item['id']) + 'F')
+                custom_non_vul_ids.append(str(cve_item['id']) + 'F' + 'N')
 
                 ckpt_cve_list.append(str(cve_item['id']))
                 DataUtils.save_json(batch_input_path, {"vul_data": vul_list, "non_vul_data": non_vul_list})
@@ -153,12 +151,8 @@ def enrich_test(benchmark, model, resume):
             logging.error(f"Error: {e}")
             logging.error(f"Detection for {cwe} failed. Checkpoint saved.")
 
-        combined_list = []
-        combined_list.append(vul_list)
-        combined_list.append(non_vul_list)
-        combined_ids = []
-        combined_ids.append(custom_vul_ids)
-        combined_ids.append(custom_non_vul_ids)
+        combined_list = vul_list + non_vul_list
+        combined_ids = custom_vul_ids + custom_non_vul_ids
 
         if len(combined_list) != len(combined_ids):
             raise Exception(f"Error in the amount of ids: Items {len(combined_list)}, Custom IDs {len(combined_ids)}")
@@ -175,10 +169,10 @@ def enrich_test(benchmark, model, resume):
         batch_log_path = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark)) / "metrics" / f"{cwe}log.json"
         batch_log_path.parent.mkdir(parents=True, exist_ok=True)
 
-        fill_batch_log(f"Enhancing testset data for {cwe}", input_tok, output_tok, len(custom_ids), model_instance.get_model_name(), None, batch_log_path, runtime)
+        fill_batch_log(f"Enhancing testset data for {cwe}", input_tok, output_tok, len(custom_vul_ids), model_instance.get_model_name(), None, batch_log_path, runtime)
 
     print("All cwes completed")
-    merge_batch_logs(Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark)) / "metrics", None, model_instance.get_model_name())
+    merge_batch_logs(Path(enhanced_dir) / "metrics", None, model_instance.get_model_name())
 
 
 def load_elastic(benchmark):

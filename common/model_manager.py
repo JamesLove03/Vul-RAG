@@ -173,8 +173,19 @@ class GPTModel(BaseModel):
         with open(output_path, "w") as f:
             f.write(file_response.read().decode("utf-8"))
 
-        data = json.loads(batch)
-        return data["usage"]["input_tokens"], data["usage"]["output_tokens"]
+        total_input = 0
+        total_output = 0
+
+        for line in file_response.iter_lines():
+            if not line:
+                continue
+
+            data = json.loads(line)
+            usage = data.get("response", {}).get("body", {}).get("usage", {})
+            total_input += usage.get("prompt_tokens", 0)
+            total_output += usage.get("completion_tokens", 0)
+
+        return total_input, total_output
 
     def read(self, filepath):
         results = {}
@@ -195,9 +206,7 @@ class GPTModel(BaseModel):
                     text = choices[0].get("message", {}).get("content", "")
 
                 if custom_id is not None:
-                    results[custom_id] = {
-                        "content": text                            
-                    }
+                    results[custom_id] = text
 
         return results
 
@@ -310,11 +319,8 @@ class GeminiModel(BaseModel):
                 )
 
                 if key is not None:
-                    results[key] = {
-                        "content": {
-                            "text": text
-                        }
-                    }
+                    results[key] = text
+                    
 
         return results
 
@@ -437,9 +443,7 @@ class ClaudeModel(BaseModel):
                 )
 
                 if custom_id is not None:
-                    results[custom_id] = {
-                        "content": text
-                    }
+                    results[custom_id] = text
 
         return results
 
