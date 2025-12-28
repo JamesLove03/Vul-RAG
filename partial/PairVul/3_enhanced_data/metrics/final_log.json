@@ -1,1 +1,1 @@
-{"custom_id": "Summarized Log Files", "batch_runtime": 85.19208646666667, "input_tokens": 3576990, "output_tokens": 247740, "total_batch_items": 2930, "model_name": "gpt-3.5-turbo", "prev_log": null, "runtime": 85.19208646666667}
+{"custom_id": "Summarized Log Files", "batch_runtime": 85.19208646666667, "input_tokens": 3576990, "output_tokens": 247740, "total_batch_items": 2930, "model_name": "gpt-3.5-turbo", "prev_log": null}

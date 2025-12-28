@@ -207,16 +207,27 @@ class KnowledgeExtractor:
 
             #write the output dict and call format_knowledge_file
 
-    def document_store(self, cwe_name_list):
+    def document_store(self, cwe_name_list, V2=False):
+        
         for cwe_name in cwe_name_list:
-            doc_path = PathUtil.knowledge_extraction_output(
-                constant.VUL_KNOWLEDGE_PATTERN_FILE_NAME.format(
-                    model_name = self.model_instance.get_model_name(), 
-                    cwe_id = cwe_name
-                ), 
-                "json"
-            )
-            #this line has document_name as in get_es_document_values
+            if V2:
+                if len(cwe_name_list) == 5:
+                    benchmark = "PairVul"
+                elif len(cwe_name_list) == 10:
+                    benchmark = "TruePairVul"
+                #set doc_path to new path
+                input_dir = constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark)
+                doc_path = Path(input_dir) / constant.BATCH_OUTPUT_NAME.format(cwe=cwe_name)
+
+            else:              
+                doc_path = PathUtil.knowledge_extraction_output(
+                    constant.VUL_KNOWLEDGE_PATTERN_FILE_NAME.format(
+                        model_name = self.model_instance.get_model_name(), 
+                        cwe_id = cwe_name
+                    ), 
+                    "json"
+                )
+                #this line has document_name as in get_es_document_values
             for document_name in constant.KnowledgeDocumentName.get_es_document_values():
                 es_retrieval = LLM4DetectionRetrieval(
                     constant.ES_INDEX_NAME_TEMPLATE.format(

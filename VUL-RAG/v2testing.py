@@ -19,6 +19,7 @@ from components.VulRAG import VulRAGDetector
 from common import common_prompt
 from common.model_manager import ModelManager
 from common.util.common_util import fill_batch_log, merge_batch_logs
+from components.knowledge_extractor import KnowledgeExtractor
 
 
 
@@ -85,8 +86,10 @@ def enrich_test(benchmark, model, resume):
         input_path = testset_dir / input_filename
 
         batch_output_filename = constant.BATCH_OUTPUT_NAME.format(cwe=cwe)
-        batch_output_path = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark)) / batch_output_filename
+        batch_output_dir = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark)) / 'batch_output'
+        batch_output_dir.mkdir(parents=True, exist_ok=True)
 
+        batch_output_path =  batch_output_dir / batch_output_filename
 
         checkpoint_path = PathUtil.checkpoint_data(batch_output_filename, "pkl")
 
@@ -171,19 +174,19 @@ def enrich_test(benchmark, model, resume):
 
         fill_batch_log(f"Enhancing testset data for {cwe}", input_tok, output_tok, len(custom_vul_ids), model_instance.get_model_name(), None, batch_log_path, runtime)
 
+        ##ADD CODE THAT WILL CREATE THE ACTUAL OUTPUT FILES
+        
+
     print("All cwes completed")
     merge_batch_logs(Path(enhanced_dir) / "metrics", None, model_instance.get_model_name())
 
 
 def load_elastic(benchmark):
+    cwes = get_cwes(benchmark)
 
-    #import the load function
-    
-    #iterate through just like in ChatGPT_Extraction.py
+    KnowledgeE = KnowledgeExtractor(model_name = 'gpt-3.5-turbo')
 
-
-    return 0
-
+    KnowledgeE.document_store(cwe_name_list=cwes, V2=True)
 
 
 def search(benchmark):
@@ -211,6 +214,9 @@ if __name__ == '__main__':
 
     if args.action == 'enrich_test':
         enrich_test(args.benchmark, args.model, args.resume)
+
+    elif args.action == 'load':
+        load_elastic(args.benchmark)
 
     elif args.action == 'search':
         search(args.benchmark, args.model, args.resume)
