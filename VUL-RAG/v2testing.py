@@ -20,7 +20,7 @@ from common import common_prompt
 from common.model_manager import ModelManager
 from common.util.common_util import fill_batch_log, merge_batch_logs
 from components.knowledge_extractor import KnowledgeExtractor
-
+from components.VulRAG import VulRAGDetector
 
 
 def get_cwes(benchmark): #returns a list of CWE values
@@ -38,8 +38,22 @@ def parse_command_line_arguments():
     parser.add_argument(
         '--benchmark', 
         type = str, 
-        default = "Pairvul",
+        default = "PairVul",
         help = 'which benchmark to test on',
+    )
+
+    parser.add_argument(
+        '--learned',
+        action= 'store_true',
+        default=False,
+        help='triggers using the learned reranker and embeddings'
+    )
+
+    parser.add_argument(
+        '--top_k',
+        type=int,
+        default=3,
+        help='amount of items to store'
     )
 
     parser.add_argument(
@@ -174,8 +188,13 @@ def enrich_test(benchmark, model, resume):
 
         fill_batch_log(f"Enhancing testset data for {cwe}", input_tok, output_tok, len(custom_vul_ids), model_instance.get_model_name(), None, batch_log_path, runtime)
 
-        ##ADD CODE THAT WILL CREATE THE ACTUAL OUTPUT FILES
-        
+        processed_item = model_instance.read(batch_output_path)
+        final_path = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark))
+
+        output_file = final_path / f"processed_output_{cwe}.json"
+        with output_file.open("w", encoding="utf-8") as f:
+            json.dump(processed_item, f, indent=2)
+
 
     print("All cwes completed")
     merge_batch_logs(Path(enhanced_dir) / "metrics", None, model_instance.get_model_name())
@@ -189,9 +208,48 @@ def load_elastic(benchmark):
     KnowledgeE.document_store(cwe_name_list=cwes, V2=True)
 
 
-def search(benchmark):
+def search(benchmark, desc, k, learned):
+    cwes = get_cwes(benchmark)
+    input_dir = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark))
+    output_dir = Path(constant.V2_SEARCH_RESULTS_DIR.format(benchmark=benchmark, k=k, search_method=desc))
+    orig_data_dir = Path(constant.V2_TESTSET_DIR.format(benchmark=benchmark))
 
-    return 0
+    #define input path, and output path
+    for cwe in cwes:
+        input_file = constant.PROCESSED_OUTPUT.format(cwe=cwe)
+        output_file = constant.PROCESSED_OUTPUT.format(cwe=cwe)
+        input_path = input_dir / input_file
+        output_path = output_dir / output_file
+        orig_data_file = constant.TEST_DATA_FILE_NAME.format(cwe_id=cwe)
+        orig_data_path = orig_data_dir / orig_data_file
+
+        with open(orig_data_path, "r", encoding="utf-8") as f:
+            test_data = json.load(f)
+
+        VulD = VulRAGDetector("gpt-3.5-turbo", "gpt-3.5-turbo", input_path)
+        start_time = datetime.now()
+
+        for value in tqdm(test_data):
+            
+            id = value["id"]
+            vul_code_snippet = value["code_before_change"]
+            non_vul_code_snippet = value["code_after_change"]
+
+            vul_purpose = VulD.data.get(f"{id}PV")
+            non_vul_purpose = VulD.data.get(f"{id}PN")
+
+            vul_function = VulD.data.get(f"{id}FV")
+            non_vul_function = VulD.data.get(f"{id}FN")
+
+            if learned:
+                vul_knowledge_list
+            else:
+
+
+
+            
+
+            vul_knowledge_list = VulD.retrieve_learned_knowledge(cwe, code_snippet, purpose, function, k)    return 0
 
 
 def rerank(benchmark):
@@ -219,7 +277,7 @@ if __name__ == '__main__':
         load_elastic(args.benchmark)
 
     elif args.action == 'search':
-        search(args.benchmark, args.model, args.resume)
+        search(args.benchmark, args.model, args.resume, args.k, args.learned)
 
     elif args.action == 'rerank':
         rerank(args.benchmark, args.resume)

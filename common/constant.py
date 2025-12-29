@@ -84,13 +84,15 @@ COMMON_DIR = str(Path(ROOT_DIR) / "common")
 #V2 file paths and names
 V2_TESTSET_DIR =  str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "3_enhanced_data" / "test_set")
 V2_ENHANCED_DATA_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "3_enhanced_data")
-V2_SEARCH_RESULTS_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "4_search_results")
+V2_ELASTIC_READY_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "2_elasticsearch_ready")
+V2_SEARCH_RESULTS_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "4_search_results" / "{search_method}_topk={k}")
 V2_RERANKED_DATA_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "5_reranked_data")
 V2_DECISION_RESULTS_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "6_decision_results")
 V2_LEARNED_RERANKER_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "7_learned_reranker")
 
 BATCH_INPUT_NAME = "batch_input_file{cwe}.jsonl"
 BATCH_OUTPUT_NAME = "batch_output_file{cwe}.jsonl"
+PROCESSED_OUTPUT = "processed_output_{cwe}.json"
 
 GPT_BATCH_TEMPLATE = {"custom_id": "{id}", "method": "POST", "url": "/v1/chat/completions", "body": {"model": "{model_name}", "messages": [],"max_tokens": 0}}
 ANTHROPIC_BATCH_TEMPLATE = {"custom_id": "", "params": {"model": "", "messages": "{message_list}","max_tokens": 0}}

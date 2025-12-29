@@ -216,8 +216,12 @@ class KnowledgeExtractor:
                 elif len(cwe_name_list) == 10:
                     benchmark = "TruePairVul"
                 #set doc_path to new path
-                input_dir = constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark)
-                doc_path = Path(input_dir) / constant.BATCH_OUTPUT_NAME.format(cwe=cwe_name)
+                input_dir = Path(constant.V2_ELASTIC_READY_DIR.format(benchmark=benchmark))
+                input_filename = constant.VUL_KNOWLEDGE_PATTERN_FILE_NAME.format(
+                        model_name = "gpt-3.5-turbo",
+                        cwe_id = cwe_name
+                    ) + ".json" 
+                doc_path = input_dir / input_filename 
 
             else:              
                 doc_path = PathUtil.knowledge_extraction_output(
