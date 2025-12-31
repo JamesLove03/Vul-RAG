@@ -43,6 +43,12 @@ def parse_command_line_arguments():
     )
 
     parser.add_argument(
+        '--desc',
+        type=str,
+        help = 'file descriptor of the specific test being run'
+    )
+
+    parser.add_argument(
         '--learned',
         action= 'store_true',
         default=False,
@@ -50,7 +56,7 @@ def parse_command_line_arguments():
     )
 
     parser.add_argument(
-        '--top_k',
+        '--top_num',
         type=int,
         default=3,
         help='amount of items to store'
@@ -229,6 +235,8 @@ def search(benchmark, desc, k, learned):
         VulD = VulRAGDetector("gpt-3.5-turbo", "gpt-3.5-turbo", input_path)
         start_time = datetime.now()
 
+        total_results = []
+
         for value in tqdm(test_data):
             
             id = value["id"]
@@ -242,14 +250,22 @@ def search(benchmark, desc, k, learned):
             non_vul_function = VulD.data.get(f"{id}FN")
 
             if learned:
-                vul_knowledge_list
+                vul_knowledge_list = VulD.retrieve_learned_knowledge(cwe, vul_code_snippet, vul_purpose, vul_function, k, True)
+                non_vul_knowledge_list = VulD.retrieve_learned_knowledge(cwe, non_vul_code_snippet, non_vul_purpose, non_vul_function, k, True)
             else:
+                vul_knowledge_list = VulD.retrieve_knowledge()
+                non_vul_knowledge_list = VulD.retrieve_knowledge()
 
+            total_results.append({
+                "id": id,
+                "vul_knowledge": vul_knowledge_list,
+                "non_vul_knowledge": non_vul_knowledge_list,
+            })
 
-
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(total_results, f, indent=2)
             
 
-            vul_knowledge_list = VulD.retrieve_learned_knowledge(cwe, code_snippet, purpose, function, k)    return 0
 
 
 def rerank(benchmark):
@@ -277,7 +293,7 @@ if __name__ == '__main__':
         load_elastic(args.benchmark)
 
     elif args.action == 'search':
-        search(args.benchmark, args.model, args.resume, args.k, args.learned)
+        search(args.benchmark, args.model, args.top_num, args.learned)
 
     elif args.action == 'rerank':
         rerank(args.benchmark, args.resume)

@@ -101,8 +101,6 @@ class VulRAGDetector:
             code_E_list.append(item["cve_id"])
             code_E_dict[item["cve_id"]] = {"content": item["content"], "score": item.get("score",0) }
 
-        reranker = LearnedReranker("model.txt")
-
         cve_id_list = function_list + purpose_list + code_list + purpose_E_list + function_E_list + code_E_list
         cve_id_list = list(set(cve_id_list)) #deleted any duplicates
 
@@ -154,7 +152,6 @@ class VulRAGDetector:
                 logging.error(f"Error cve_id: {item['cve_id']}")
         
         return knowledge_list
-
 
     def format_retrieved_answer(self, purpose_answer, function_answer, code_answer):
         '''
@@ -368,9 +365,10 @@ class VulRAGDetector:
 
     def final_format(self, response):
 
-        top_10 = self.learned_reranker(response)
-        #swap the id field in this top_10 variable with the cve_id that can be used to fill out info
-        true_id_list = [int(key) for key in top_10.keys()]
+        reranked_results = self.learned_reranker(response)
+
+        #swap the id field in this top k variable with the cve_id that can be used to fill out info
+        true_id_list = [int(key) for key in reranked_results.keys()]
                     
         #fill in info to match the original return value of retrieve_knowledge()
         knowledge_list = []
@@ -482,7 +480,7 @@ class VulRAGDetector:
 
         return combined
 
-    def retrieve_learned_knowledge(self, cwe_name, code_snippet, purpose, function, top_N=10):
+    def retrieve_learned_knowledge(self, cwe_name, code_snippet, purpose, function, top_N=10, early_exit=False):
 
         #generate embeddings for passed queries
         purpose_embed = self.embedder(purpose)
@@ -503,19 +501,20 @@ class VulRAGDetector:
             lower_document_name = kdn.CODE_BEFORE.value.lower()
         ), kdn.CODE_BEFORE.value.lower())
         #search bm25 results
-        purpose_answer = es_purpose.search_cve(query = purpose, idx = 2, filteridx = 2, cve_id=1)
-        function_answer = es_function.search_cve(query = function, idx = 1, filteridx = 2, cve_id=1)        
-        code_answer = es_code.search_cve(query = code_snippet, idx = 0, filteridx = 2, cve_id=1)   
+        purpose_answer = es_purpose.search_cve(query = purpose, idx = 2, filteridx = 2, cve_id=1, top_k=top_N)
+        function_answer = es_function.search_cve(query = function, idx = 1, filteridx = 2, cve_id=1, top_k=top_N)        
+        code_answer = es_code.search_cve(query = code_snippet, idx = 0, filteridx = 2, cve_id=1, top_k=top_N)   
 
         #search emb results
-        purpose_embed_answer = es_purpose.search_embed_cve(query = purpose_embed, idx = 2, filteridx = 2, cve_id=1)
-        function_embed_answer = es_function.search_embed_cve(query = function_embed, idx = 1, filteridx = 2, cve_id=1)        
-        code_embed_answer = es_code.search_embed_cve(query = code_embed, idx = 0, filteridx = 2, cve_id=1)
+        purpose_embed_answer = es_purpose.search_embed_cve(query = purpose_embed, idx = 2, filteridx = 2, cve_id=1, top_k=top_N)
+        function_embed_answer = es_function.search_embed_cve(query = function_embed, idx = 1, filteridx = 2, cve_id=1, top_k=top_N)        
+        code_embed_answer = es_code.search_embed_cve(query = code_embed, idx = 0, filteridx = 2, cve_id=1, top_K=top_N)
+        
         #call fill_blanks
         dicts = [code_answer, code_embed_answer, function_answer, function_embed_answer, purpose_answer, purpose_embed_answer]
         queries = [code_snippet, code_embed, function, function_embed, purpose, purpose_embed]
-        
         response = self.fill_blanks(es_purpose, es_function, es_code, dicts, queries)  
+
         #return the formatted list
         return self.final_format(response)
 
@@ -603,7 +602,6 @@ class VulRAGDetector:
         model_settings_dict = kwargs.get('model_settings_dict', {})
         query_cve = kwargs.get('cve_id')
         no_explanation = kwargs.get('no_explanation', False)
-
 
         #log the beginning of a query
         start_time = datetime.now()
