@@ -57,6 +57,8 @@ class MetricsKeywords(Enum):
     CLR = "Correct Lib Decision Rate"
     
 BATCH_LOG_FORMAT = {"custom_id": "", "batch_runtime": 0, "input_tokens": 0, "output_tokens": 0, "total_batch_items": 0, "model_name": "", "prev_log": ""}
+SEARCH_LOG_FORMAT = {"custom_id": "", "runtime": 0, "searched_items": 0, "returned_items": 0, "embeddings_included": "", "prev_log": "", "K-value": 0}
+
 
 class KnowledgeDocumentName(Enum):
     PRECONDITIONS = "preconditions_for_vulnerability"
@@ -85,7 +87,7 @@ COMMON_DIR = str(Path(ROOT_DIR) / "common")
 V2_TESTSET_DIR =  str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "3_enhanced_data" / "test_set")
 V2_ENHANCED_DATA_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "3_enhanced_data")
 V2_ELASTIC_READY_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "2_elasticsearch_ready")
-V2_SEARCH_RESULTS_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "4_search_results" / "{search_method}_topk={k}")
+V2_SEARCH_RESULTS_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "4_search_results" / "{embedder}_topk={k}")
 V2_RERANKED_DATA_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "5_reranked_data")
 V2_DECISION_RESULTS_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "6_decision_results")
 V2_LEARNED_RERANKER_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "7_learned_reranker")

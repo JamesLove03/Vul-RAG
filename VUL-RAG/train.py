@@ -53,9 +53,12 @@ def train_model():
         )
         
         VulD = VulRAGDetector("gpt-4o", "gpt-4o", knowledge_path)
+        VulD.update_retrievers(cwe_id)
+
         test_clean_data_path = PathUtil.test_data(constant.TEST_DATA_FILE_NAME.format(cwe_id = cwe_id), "json")
         test_clean_data = DataUtils.load_json(test_clean_data_path)
         cve_list = test_clean_data
+        
         pos_reg = 0
         neg_reg = 0
         #Divide each CVE item item into vul and non-vul

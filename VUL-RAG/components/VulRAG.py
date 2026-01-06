@@ -13,6 +13,7 @@ import logging
 import json
 import openai
 import tiktoken
+from tqdm import tqdm
 from elasticsearch import Elasticsearch
 import numpy as np
 import lightgbm as lgb
@@ -31,6 +32,25 @@ class VulRAGDetector:
         self.retrieval_rank_weight = retrieval_rank_weight
         self.model_instance = ModelManager.get_model_instance(model_name)
         self.summary_model_instance = ModelManager.get_model_instance(summary_model_name)
+        self.func = None
+        self.purp = None
+        self.code = None
+
+    def update_retrievers(self, cwe_name):
+        self.func = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
+            lower_cwe_id = cwe_name.lower(), 
+            lower_document_name = kdn.FUNCTION.value.lower()
+        ), kdn.FUNCTION.value.lower())
+
+        self.purp = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
+            lower_cwe_id = cwe_name.lower(), 
+            lower_document_name = kdn.PURPOSE.value.lower()
+        ), kdn.PURPOSE.value.lower())
+
+        self.code = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
+            lower_cwe_id = cwe_name.lower(), 
+            lower_document_name = kdn.CODE_BEFORE.value.lower()
+        ), kdn.CODE_BEFORE.value.lower())
     
     def rerank_by_rank(self, purpose_result: list, function_result: list, code_result: list):
         '''
@@ -66,92 +86,6 @@ class VulRAGDetector:
             final_result.append(id_info)
 
         return final_result
-
-    def format_embed_answer(self, purpose_bm25, function_bm25, code_bm25, purpose_embed, function_embed, code_embed):
-        #This function will handle the formatting of the code in a similiar way to the original format_retrieved_answer, but will call a different rerank function
-        purpose_list = []
-        purpose_dict = {}
-        function_list = []
-        function_dict = {}
-        code_list = []
-        code_dict = {}
-        purpose_E_list = []
-        purpose_E_dict = {}
-        function_E_list = []
-        function_E_dict = {}
-        code_E_list = []
-        code_E_dict = {}
-
-        for item in purpose_bm25:
-            purpose_list.append(item["cve_id"])
-            purpose_dict[item["cve_id"]] = {"content": item["content"], "score": item.get("score",0) } #add score to the dictionary
-        for item in function_bm25:
-            function_list.append(item["cve_id"])
-            function_dict[item["cve_id"]] = {"content": item["content"], "score": item.get("score",0) }
-        for item in code_bm25:
-            code_list.append(item["cve_id"])
-            code_dict[item["cve_id"]] = {"content": item["content"], "score": item.get("score",0) }
-        for item in purpose_embed:
-            purpose_E_list.append(item["cve_id"])
-            purpose_E_dict[item["cve_id"]] = {"content": item["content"], "score": item.get("score",0) }
-        for item in function_embed:
-            function_E_list.append(item["cve_id"])
-            function_E_dict[item["cve_id"]] = {"content": item["content"], "score": item.get("score",0) }
-        for item in code_embed:
-            code_E_list.append(item["cve_id"])
-            code_E_dict[item["cve_id"]] = {"content": item["content"], "score": item.get("score",0) }
-
-        cve_id_list = function_list + purpose_list + code_list + purpose_E_list + function_E_list + code_E_list
-        cve_id_list = list(set(cve_id_list)) #deleted any duplicates
-
-        indexed_data = {}
-        for idx, cve in enumerate(cve_id_list):
-            input_vector = [
-                purpose_dict.get(cve, {}).get("score", 0),
-                function_dict.get(cve, {}).get("score", 0),
-                code_dict.get(cve, {}).get("score", 0),
-                purpose_E_dict.get(cve, {}).get("score", 0),
-                function_E_dict.get(cve, {}).get("score", 0),
-                code_E_dict.get(cve, {}).get("score", 0),
-            ]
-            indexed_data[idx] = {
-                "cve_id": cve,
-                "input_vector": input_vector,
-                "score": 0  # Placeholder for prediction score
-            }
-        
-        rerank_result = reranker.rerank(indexed_data)
-
-        knowledge_list = []
-
-        for item in rerank_result:
-            try:
-                cve_knowledge = self.vul_knowledge[item["cve_id"]]
-                for knowledge_item in cve_knowledge:
-                    if (item["cve_id"] in purpose_dict.keys() and 
-                        purpose_dict[item["cve_id"]] == knowledge_item[kdn.PURPOSE.value]) \
-                    or (item["cve_id"] in function_dict.keys() and 
-                        function_dict[item["cve_id"]] == knowledge_item[kdn.FUNCTION.value]) \
-                    or (item["cve_id"] in code_dict.keys() and 
-                        code_dict[item["cve_id"]] == knowledge_item[kdn.CODE_BEFORE.value]):
-
-                        knowledge_list.append({
-                            "cve_id": knowledge_item.get(kdn.CVE_ID.value), 
-                            "vulnerability_behavior": 
-                            {
-                                kdn.PRECONDITIONS.value: knowledge_item.get(kdn.PRECONDITIONS.value),
-                                kdn.TRIGGER.value: knowledge_item.get(kdn.TRIGGER.value), 
-                                kdn.CODE_BEHAVIOR.value: knowledge_item.get(kdn.CODE_BEHAVIOR.value)
-                            }, 
-                            "solution_behavior": knowledge_item.get(kdn.SOLUTION.value),
-                        })
-                        break
-
-            except Exception as e:
-                logging.error(f"Error: {e}")
-                logging.error(f"Error cve_id: {item['cve_id']}")
-        
-        return knowledge_list
 
     def format_retrieved_answer(self, purpose_answer, function_answer, code_answer):
         '''
@@ -214,14 +148,16 @@ class VulRAGDetector:
     def truncate_to_limit(self, text, max_tokens=8192, model="text-embedding-3-small"):
         encoding = tiktoken.encoding_for_model(model)
         tokens = encoding.encode(text)
+        if len(tokens) > 8192:
+            print(f"truncated a text that was at {len(tokens)}")
         truncated = tokens[:max_tokens]
-        print("truncated a text")
         return encoding.decode(truncated)
     
     def embedder(self, query):
         logging.disable(logging.CRITICAL)
 
         openai.api_key = cfg.openkey_openai_api_key
+
         truncated = self.truncate_to_limit(query)
         try:    
             response = openai.embeddings.create( 
@@ -244,88 +180,25 @@ class VulRAGDetector:
             })
         return formatted_answer_list
 
-    def retrieve_knowledge(self, cwe_name, code_snippet, purpose, function, top_N):
+    def retrieve_knowledge(self, cwe_name, code_snippet, purpose, function, top_N=10, early_exit=False):
         logging.disable(logging.INFO)
-        #declare elasticsearch item for the embedding search
-        es = Elasticsearch([{"host": "localhost", "port": 9201}])
+        
+        es_purpose = self.purp
+        es_function = self.func
+        es_code = self.code
 
-        purpose_query = purpose
-        es_retrieval = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
-            lower_cwe_id = cwe_name.lower(), 
-            lower_document_name = kdn.PURPOSE.value.lower()
-        ), kdn.PURPOSE.value.lower())
-        purpose_answer = es_retrieval.search(query = purpose_query, retrieve_top_k = top_N)
-
-        #create embedding for purpose_answer
-        purpose_embed = self.embedder(purpose_query)
-        query_body = {
-            "size": top_N,
-            "query": {
-                "knn": {
-                    "embedding": {
-                        "vector": purpose_embed,
-                        "k": top_N
-                    }
-                }
-            }
-        }
-        purpose_embed = es.search(es_retrieval.index, body=query_body)
-        purpose_emb_answer = self.format_embeddings(purpose_embed)
-
-        function_query = function
-        es_retrieval = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
-            lower_cwe_id = cwe_name.lower(), 
-            lower_document_name = kdn.FUNCTION.value.lower()
-        ), kdn.FUNCTION.value.lower())
-        function_answer = es_retrieval.search(query = function_query, retrieve_top_k = top_N)
-
-        #create embedding for function_answer
-        function_embed = self.embedder(function_query)
-        query_body = {
-            "size": top_N,
-            "query": {
-                "knn": {
-                    "embedding": {
-                        "vector": function_embed,
-                        "k": top_N
-                    }
-                }
-            }
-        }
-        function_embed = es.search(es_retrieval.index, body=query_body)
-        function_emb_answer = self.format_embeddings(function_embed)
-
-        function_query = code_snippet
-        es_retrieval = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
-            lower_cwe_id = cwe_name.lower(), 
-            lower_document_name = kdn.CODE_BEFORE.value.lower()
-        ), kdn.CODE_BEFORE.value.lower())
-        try:
-            code_answer = es_retrieval.search(query = function_query, retrieve_top_k = top_N)
-        except:
-            code_answer = es_retrieval.search(query = function_query[:cfg.ES_SEARCH_MAX_TOKEN_LENGTH], retrieve_top_k = top_N)
-
-        #create embedding for code_answer
-        code_embed = self.embedder(function_query)
-        query_body = {
-            "size": top_N,
-            "query": {
-                "knn": {
-                    "embedding": {
-                        "vector": code_embed,
-                        "k": top_N
-                    }
-                }
-            }
-        }
-        code_embed = es.search(es_retrieval.index, body=query_body)
-        code_emb_answer = self.format_embeddings(code_embed)
-
+        #search bm25 results
+        purpose_answer = es_purpose.search_cve(query = purpose, idx = 2, filteridx = 2, cve_id=1, top_k=top_N)
+        function_answer = es_function.search_cve(query = function, idx = 1, filteridx = 2, cve_id=1, top_k=top_N)        
+        code_answer = es_code.search_cve(query = code_snippet, idx = 0, filteridx = 2, cve_id=1, top_k=top_N)   
 
         # enable logging info
         logging.disable(logging.NOTSET)
 
-        return self.format_embed_answer(purpose_answer, function_answer, code_answer, purpose_emb_answer, function_emb_answer, code_emb_answer)
+        if early_exit:
+            return 0
+
+        return self.format_retrieved_answer(purpose_answer, function_answer, code_answer)
 
     def format_retrieved_answer_by_code(self, code_before_answer, code_after_answer):
         assert len(code_before_answer) == len(code_after_answer)
@@ -394,11 +267,10 @@ class VulRAGDetector:
         return knowledge_list        
 
     def retrieve_similar_code(self, cwe_name, code_snippet, top_N):
+        
+        #THIS FUNCTION IS DEPRECATED DUE TO NOT SETTING UP A CODE_AFTER_CHANGE RETRIEVER
         function_query = code_snippet
-        es_retrieval = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
-            lower_cwe_id = cwe_name.lower(), 
-            lower_document_name = kdn.CODE_BEFORE.value.lower()
-        ), kdn.CODE_BEFORE.value.lower())
+        es_retrieval = self.code
         try:
             code_before_change_answer = es_retrieval.search(query = function_query, retrieve_top_k = top_N)
         except:
@@ -407,10 +279,7 @@ class VulRAGDetector:
                 retrieve_top_k = top_N
             )
 
-        es_retrieval = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
-            lower_cwe_id = cwe_name.lower(), 
-            lower_document_name = kdn.CODE_AFTER.value.lower()
-        ), kdn.CODE_AFTER.value.lower())
+        es_retrieval = "This is where the new retriever has to go"
         try:
             code_after_change_answer = es_retrieval.search(query = function_query, retrieve_top_k = top_N)
         except:
@@ -426,7 +295,8 @@ class VulRAGDetector:
         combined = {}
         for d in dicts:
             all_keys.update(d.keys())
-        for key in all_keys:
+
+        for key in tqdm(all_keys):
             scores = []
             for i, d in enumerate(dicts):
                 if key not in d:
@@ -464,7 +334,6 @@ class VulRAGDetector:
                             d[key] = res[key]
                         else:
                             d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
-                            print("Empty purpose on: ", key)
                     elif i == 5: #purpose embed dict missing
                         res = purpose_ds.search_embed_cve(query = queries[i], idx = 2, filteridx = 3, cve_id = key)
                         if res is not None and key in res and res[key] is not None:
@@ -477,7 +346,6 @@ class VulRAGDetector:
                 scores.append(d[key]["score"])
             
             combined[key] = {"scores": scores}
-
         return combined
 
     def retrieve_learned_knowledge(self, cwe_name, code_snippet, purpose, function, top_N=10, early_exit=False):
@@ -488,18 +356,10 @@ class VulRAGDetector:
         code_embed = self.embedder(code_snippet)
 
         #generate the three es_retrieval items
-        es_purpose = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
-            lower_cwe_id = cwe_name.lower(), 
-            lower_document_name = kdn.PURPOSE.value.lower()
-        ), kdn.PURPOSE.value.lower())
-        es_function = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
-            lower_cwe_id = cwe_name.lower(), 
-            lower_document_name = kdn.FUNCTION.value.lower()
-        ), kdn.FUNCTION.value.lower())
-        es_code = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
-            lower_cwe_id = cwe_name.lower(), 
-            lower_document_name = kdn.CODE_BEFORE.value.lower()
-        ), kdn.CODE_BEFORE.value.lower())
+        es_purpose = self.purp
+        es_function = self.func
+        es_code = self.code
+
         #search bm25 results
         purpose_answer = es_purpose.search_cve(query = purpose, idx = 2, filteridx = 2, cve_id=1, top_k=top_N)
         function_answer = es_function.search_cve(query = function, idx = 1, filteridx = 2, cve_id=1, top_k=top_N)        
@@ -508,13 +368,16 @@ class VulRAGDetector:
         #search emb results
         purpose_embed_answer = es_purpose.search_embed_cve(query = purpose_embed, idx = 2, filteridx = 2, cve_id=1, top_k=top_N)
         function_embed_answer = es_function.search_embed_cve(query = function_embed, idx = 1, filteridx = 2, cve_id=1, top_k=top_N)        
-        code_embed_answer = es_code.search_embed_cve(query = code_embed, idx = 0, filteridx = 2, cve_id=1, top_K=top_N)
+        code_embed_answer = es_code.search_embed_cve(query = code_embed, idx = 0, filteridx = 2, cve_id=1, top_k=top_N)
         
         #call fill_blanks
         dicts = [code_answer, code_embed_answer, function_answer, function_embed_answer, purpose_answer, purpose_embed_answer]
         queries = [code_snippet, code_embed, function, function_embed, purpose, purpose_embed]
         response = self.fill_blanks(es_purpose, es_function, es_code, dicts, queries)  
 
+        #if we want a early return perform that here
+        if early_exit:
+            return response
         #return the formatted list
         return self.final_format(response)
 
@@ -781,20 +644,9 @@ class VulRAGDetector:
         )
         
         #Create the es items that will be used to access all of our retrievers
-        es_purpose = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
-            lower_cwe_id = cwe_name.lower(), 
-            lower_document_name = kdn.PURPOSE.value.lower()
-        ), kdn.PURPOSE.value.lower())
-
-        es_function = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
-            lower_cwe_id = cwe_name.lower(), 
-            lower_document_name = kdn.FUNCTION.value.lower()
-        ), kdn.FUNCTION.value.lower())
-
-        es_code = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
-            lower_cwe_id = cwe_name.lower(), 
-            lower_document_name = kdn.CODE_BEFORE.value.lower()
-        ), kdn.CODE_BEFORE.value.lower())
+        es_purpose = self.purp
+        es_function = self.func
+        es_code = self.code
 
         #Search for incorrect examples (label == 0, filteridx == 1)
         purpose_answer = es_purpose.search_cve(query = purpose, idx = 2, filteridx = 1, cve_id=query_cve)

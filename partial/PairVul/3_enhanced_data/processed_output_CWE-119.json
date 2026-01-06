@@ -9,7 +9,7 @@
   "7FV": "The functions of the code snippet are:\n1. Extracts the DOI value from the netlink attribute.\n2. Validates nested attributes according to specified policy.\n3. Iterates through the tag list, extracting and storing tag values in the tags array.",
   "10PV": "Function purpose: Sends a page of data from a file to a socket connection, with options for non-blocking and sending in segments.",
   "10FV": "The functions of the code snippet are:\n1. Sending a page over a socket\n2. Determining flags based on file flags\n3. Handling flags for sending the page",
-  "28P": "Function purpose: This function registers a MAC address in the MAC table of a Mellanox ConnectX-4 device for a specific port.",
+  "28PV": "Function purpose: This function registers a MAC address in the MAC table of a Mellanox ConnectX-4 device for a specific port.",
   "28FV": "The functions of the code snippet are:\n1. Registering a MAC address in the MAC table.\n2. Checking if the MAC address is already registered and increasing the reference count.\n3. Finding a free index in the MAC table.\n4. Handling cases where there are no free MAC entries or errors in adding a new MAC address.",
   "30PV": "Function purpose: This function is responsible for allocating blocks in a GFS2 filesystem for a given inode's metadata and data storage.",
   "30FV": "The functions of the code snippet are:\n1. Allocate blocks for a GFS2 filesystem\n2. Manage the allocation state using a state machine\n3. Grow the height and depth of the filesystem tree\n4. Initialize indirect blocks and pointers\n5. Handle the allocation of data blocks",

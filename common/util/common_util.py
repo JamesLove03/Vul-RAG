@@ -60,6 +60,52 @@ def fill_batch_log(id, inp, out, num_items, modelname, prev_path, output_path, r
         json.dump(entry, f)
         f.write("\n")
 
+def merge_search_log(search_log_dir, prev_path, embeddings, k_val, output_path):
+    searched = 0
+    returned = 0
+    runtime = 0
+
+    for file in Path(search_log_dir).iterdir():
+        with file.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        searched += data["searched_items"]
+        returned += data["returned_items"]
+        runtime += data["runtime"]
+
+    entry = copy.deepcopy(constant.SEARCH_LOG_FORMAT)
+    entry["custom_id"] = "Final merged log for searching BEFORE reranking"
+    entry["runtime"] = runtime
+    entry["searched_items"] = searched
+    entry["returned_items"] = returned
+    entry["runtime"] = runtime
+    entry["embeddings_included"] = embeddings
+    entry["prev_log"] = prev_path
+    entry["K-value"] = k_val
+
+    with output_path.open("a", encoding="utf-8") as f:
+        json.dump(entry, f)
+        f.write("\n")
+
+
+
+def fill_search_log(id, num_items, returned_items, embeddings, prev_path, output_path, runtime, k_val):
+    entry = copy.deepcopy(constant.SEARCH_LOG_FORMAT)
+    entry["custom_id"] = id
+    entry["runtime"] = runtime
+    entry["searched_items"] = num_items
+    entry["returned_items"] = returned_items
+    entry["embeddings_included"] = embeddings
+    entry["prev_log"] = prev_path
+    entry["K-value"] = k_val
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with output_path.open("a", encoding="utf-8") as f:
+        json.dump(entry, f)
+        f.write("\n")
+
+
 def fill_template(model:str, message:list, id:int):
     final_list = []
     

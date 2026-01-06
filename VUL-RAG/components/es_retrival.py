@@ -46,73 +46,18 @@ class ESRetrieval:
                 es.indices.create(index = self.index)
             es.indices.put_settings(index = self.index, body = cfg.ES_SETTINGS)
 
-        self.ds_code_after_change: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
+        self.document_store: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
             timeout=120,
         )
-        self.ds_code_before_change: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
-            hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
-            verify_certs = False,
-            index = self.index,
-            timeout=120,
+        self.retriever: ElasticsearchRetriever = ElasticsearchRetriever(
+            document_store = self.document_store
         )
-        self.ds_gpt_function: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
-            hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
-            verify_certs = False,
-            index = self.index,
-            timeout=120,
+        self.embedding_retriever: ElasticsearchEmbeddingRetriever = ElasticsearchEmbeddingRetriever(
+            document_store=self.document_store
         )
-        self.ds_gpt_purpose: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
-            hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
-            verify_certs = False,
-            index = self.index,
-            timeout=120,
-        )
-        self.ds_solution: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
-            hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
-            verify_certs = False,
-            index = self.index,
-            timeout=120,
-        )
-        self.ds_specific_code_behavior_causing_vulnerability: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
-            hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
-            verify_certs = False,
-            index = self.index,
-            timeout=120,
-        )
-        self.ds_trigger_condition: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
-            hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
-            verify_certs = False,
-            index = self.index,
-            timeout=120,
-        )
-        self.ds_preconditions_for_vulnerability: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
-            hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
-            verify_certs = False,
-            index = self.index,
-            timeout=120,
-        )
-        self.cbc_retriever: ElasticsearchRetriever = ElasticsearchRetriever(
-            document_store = self.ds_code_before_change
-        )
-        self.cbc_embed_retriever: ElasticsearchEmbeddingRetriever = ElasticsearchEmbeddingRetriever(
-            document_store= self.ds_code_before_change,
-        )
-        self.func_retriever: ElasticsearchRetriever = ElasticsearchRetriever(
-            document_store = self.ds_gpt_function
-        )
-        self.func_embed_retriever: ElasticsearchEmbeddingRetriever = ElasticsearchEmbeddingRetriever(
-            document_store= self.ds_gpt_function,
-        )
-        self.purp_retriever: ElasticsearchRetriever = ElasticsearchRetriever(
-            document_store = self.ds_gpt_purpose
-        )
-        self.purp_embed_retriever: ElasticsearchEmbeddingRetriever = ElasticsearchEmbeddingRetriever(
-            document_store= self.ds_code_before_change,
-        )
-
 
     def truncate_to_limit(self, text, max_tokens=8192, model="text-embedding-3-small"):
         encoding = tiktoken.encoding_for_model(model)
@@ -293,25 +238,12 @@ class ESRetrieval:
             }
         else:
             print("Invalid filteridx")
-        
-        if idx == 0:
-            answers = self.cbc_embed_retriever.run(
-                query_embedding=query,
-                filters = filters,
-                top_k=top_k
-            )
-        elif idx == 1:
-            answers = self.func_embed_retriever.run(
-                query_embedding=query,
-                filters = filters,
-                top_k=top_k
-            )
-        elif idx == 2:
-            answers = self.purp_embed_retriever.run(
-                query_embedding=query,
-                filters = filters,
-                top_k=top_k
-            )     
+
+        answers = self.embedding_retriever.run(
+            query_embedding=query,
+            filters = filters,
+            top_k=top_k
+        )     
 
         if answers is None or len(answers["documents"]) == 0:
             return None  
@@ -360,27 +292,12 @@ class ESRetrieval:
             }
         else:
             print("Invalid filteridx")
-        
-        
-            
-        if idx == 0:
-            answers = self.cbc_retriever.run(
-                query=query,
-                filters = filters,
-                top_k=top_k
-            )
-        elif idx == 1:
-            answers = self.func_retriever.run(
-                query=query,
-                filters = filters,
-                top_k=top_k
-            )
-        elif idx == 2:
-            answers = self.purp_retriever.run(
-                query=query,
-                filters = filters,
-                top_k=top_k
-            )
+          
+        answers = self.retriever.run(
+            query=query,
+            filters = filters,
+            top_k=top_k
+        )
     
         #check for nonexistant matches (ie in test set and not training set)
         if answers is None or len(answers["documents"]) == 0:

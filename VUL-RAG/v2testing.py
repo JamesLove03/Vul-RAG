@@ -18,7 +18,7 @@ from common.util.track_util import Tracker
 from components.VulRAG import VulRAGDetector
 from common import common_prompt
 from common.model_manager import ModelManager
-from common.util.common_util import fill_batch_log, merge_batch_logs
+from common.util.common_util import fill_batch_log, merge_batch_logs, fill_search_log, merge_search_log
 from components.knowledge_extractor import KnowledgeExtractor
 from components.VulRAG import VulRAGDetector
 
@@ -45,6 +45,7 @@ def parse_command_line_arguments():
     parser.add_argument(
         '--desc',
         type=str,
+        default = "None",
         help = 'file descriptor of the specific test being run'
     )
 
@@ -217,25 +218,30 @@ def load_elastic(benchmark):
 def search(benchmark, desc, k, learned):
     cwes = get_cwes(benchmark)
     input_dir = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark))
-    output_dir = Path(constant.V2_SEARCH_RESULTS_DIR.format(benchmark=benchmark, k=k, search_method=desc))
+    output_dir = Path(constant.V2_SEARCH_RESULTS_DIR.format(benchmark=benchmark, k=k, embedder=desc))
     orig_data_dir = Path(constant.V2_TESTSET_DIR.format(benchmark=benchmark))
 
     #define input path, and output path
     for cwe in cwes:
+        print(f"Now searching {cwe}")
+        start_time = datetime.now()
+
         input_file = constant.PROCESSED_OUTPUT.format(cwe=cwe)
         output_file = constant.PROCESSED_OUTPUT.format(cwe=cwe)
         input_path = input_dir / input_file
         output_path = output_dir / output_file
         orig_data_file = constant.TEST_DATA_FILE_NAME.format(cwe_id=cwe)
-        orig_data_path = orig_data_dir / orig_data_file
+        orig_data_path = (orig_data_dir / orig_data_file).with_suffix(".json")
 
         with open(orig_data_path, "r", encoding="utf-8") as f:
             test_data = json.load(f)
 
         VulD = VulRAGDetector("gpt-3.5-turbo", "gpt-3.5-turbo", input_path)
+        VulD.update_retrievers(cwe)
         start_time = datetime.now()
 
         total_results = []
+        total_length = 0
 
         for value in tqdm(test_data):
             
@@ -243,28 +249,57 @@ def search(benchmark, desc, k, learned):
             vul_code_snippet = value["code_before_change"]
             non_vul_code_snippet = value["code_after_change"]
 
-            vul_purpose = VulD.data.get(f"{id}PV")
-            non_vul_purpose = VulD.data.get(f"{id}PN")
+            vul_purpose = VulD.vul_knowledge.get(f"{id}PV")
+            non_vul_purpose = VulD.vul_knowledge.get(f"{id}PN")
 
-            vul_function = VulD.data.get(f"{id}FV")
-            non_vul_function = VulD.data.get(f"{id}FN")
+            vul_function = VulD.vul_knowledge.get(f"{id}FV")
+            non_vul_function = VulD.vul_knowledge.get(f"{id}FN")
+
+            print(f"Now working on {id}\n")
 
             if learned:
                 vul_knowledge_list = VulD.retrieve_learned_knowledge(cwe, vul_code_snippet, vul_purpose, vul_function, k, True)
                 non_vul_knowledge_list = VulD.retrieve_learned_knowledge(cwe, non_vul_code_snippet, non_vul_purpose, non_vul_function, k, True)
             else:
-                vul_knowledge_list = VulD.retrieve_knowledge()
-                non_vul_knowledge_list = VulD.retrieve_knowledge()
+                vul_knowledge_list = VulD.retrieve_knowledge(cwe, vul_code_snippet, vul_purpose, vul_function, k, True)
+                non_vul_knowledge_list = VulD.retrieve_knowledge(cwe, non_vul_code_snippet, non_vul_purpose, non_vul_function, k, True)
+
+            length = len(vul_knowledge_list) + len(non_vul_knowledge_list)
+            total_length += length
 
             total_results.append({
                 "id": id,
                 "vul_knowledge": vul_knowledge_list,
                 "non_vul_knowledge": non_vul_knowledge_list,
+                "total_length": length,
             })
 
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(total_results, f, indent=2)
+        
+        end_time = datetime.now()
+        runtime = ((end_time - start_time).total_seconds()) / 60 # gets runtime in minutes
+
+        output_log_path = output_dir / "metrics" / f"{cwe}log.json"
+        input_log_path = input_dir / 'metrics' / f"{cwe}log.json"
+
+        fill_search_log(f"Searching elasticsearch for {cwe}", 
+                        len(test_data), 
+                        total_length, 
+                        learned, 
+                        input_log_path, 
+                        output_log_path, 
+                        runtime, 
+                        k)
+
             
+    print("Done searching all files")
+    merge_search_log((output_dir / "metrics"), 
+                     (input_dir / 'metrics' / "final_log.json"),
+                     learned,
+                     k,
+                     (output_dir / 'metrics' / 'final_log.json')
+                     )
 
 
 
