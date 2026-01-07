@@ -4,7 +4,7 @@ import time
 import tiktoken
 from haystack_integrations.document_stores.elasticsearch import ElasticsearchDocumentStore
 from haystack_integrations.components.retrievers.elasticsearch import ElasticsearchEmbeddingRetriever
-
+import pdb
 #try:
 from haystack_integrations.components.retrievers.elasticsearch import ElasticsearchBM25Retriever as ElasticsearchRetriever
 #except:
@@ -21,10 +21,6 @@ from haystack import Document
 import common.constant as constant
 import uuid
 logging.basicConfig(level=logging.DEBUG)
-
-
-
-
 from elasticsearch import Elasticsearch
 import urllib3
 urllib3.disable_warnings()
@@ -46,17 +42,18 @@ class ESRetrieval:
                 es.indices.create(index = self.index)
             es.indices.put_settings(index = self.index, body = cfg.ES_SETTINGS)
 
-        self.document_store: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
+        self.doc_store: ElasticsearchDocumentStore = ElasticsearchDocumentStore(
             hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
             verify_certs = False,
             index = self.index,
             timeout=120,
         )
+
         self.retriever: ElasticsearchRetriever = ElasticsearchRetriever(
-            document_store = self.document_store
+            document_store = self.doc_store
         )
-        self.embedding_retriever: ElasticsearchEmbeddingRetriever = ElasticsearchEmbeddingRetriever(
-            document_store=self.document_store
+        self.embed_retriever: ElasticsearchEmbeddingRetriever = ElasticsearchEmbeddingRetriever(
+            document_store = self.doc_store
         )
 
     def truncate_to_limit(self, text, max_tokens=8192, model="text-embedding-3-small"):
@@ -239,10 +236,10 @@ class ESRetrieval:
         else:
             print("Invalid filteridx")
 
-        answers = self.embedding_retriever.run(
+        answers = self.embed_retriever.run(
             query_embedding=query,
             filters = filters,
-            top_k=top_k
+            top_k=top_k,
         )     
 
         if answers is None or len(answers["documents"]) == 0:
@@ -296,7 +293,7 @@ class ESRetrieval:
         answers = self.retriever.run(
             query=query,
             filters = filters,
-            top_k=top_k
+            top_k=top_k,
         )
     
         #check for nonexistant matches (ie in test set and not training set)

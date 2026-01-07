@@ -26,10 +26,10 @@ from components.VulRAG import VulRAGDetector
 def get_cwes(benchmark): #returns a list of CWE values
 
     if benchmark == "PairVul":
-        cwes = ["CWE-119", "CWE-362", "CWE-416", "CWE-476", "CWE-787"]
+        cwes = ["CWE-TEST1", "CWE-TEST2"] #use these for testing
+        #cwes = ["CWE-119", "CWE-362", "CWE-416", "CWE-476", "CWE-787"]
     elif benchmark == "TruePairVul":
         cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"]
-
     return cwes
 
 def parse_command_line_arguments():
@@ -41,50 +41,54 @@ def parse_command_line_arguments():
         default = "PairVul",
         help = 'which benchmark to test on',
     )
-
     parser.add_argument(
         '--desc',
         type=str,
         default = "None",
         help = 'file descriptor of the specific test being run'
     )
-
     parser.add_argument(
         '--learned',
         action= 'store_true',
         default=False,
         help='triggers using the learned reranker and embeddings'
     )
-
     parser.add_argument(
-        '--top_num',
+        '--new_directory',
+        default = None,
+        type=str,
+        help='specifies if a new directory needs to be added'
+    )
+    parser.add_argument(
+        '--top_K',
         type=int,
-        default=3,
+        default=10,
         help='amount of items to store'
     )
-
+    parser.add_argument(
+        '--top_N',
+        type=int,
+        default=3,
+        help='amount of items returned from reranking'
+    )
     parser.add_argument(
         '--action',
         type = str,
         default = None,
         help = "Should be one of the following actions: enrich_test, search, rerank, decision"
     )
-
     parser.add_argument(
         '--model',
         type = str,
         default = "gpt-3.5-turbo",
         help = "Select the model to run on"
     )
-
     parser.add_argument(
         '--resume',
         action = 'store_true',
         help = 'Whether to resume from a checkpoint.'
     )
-
     args = parser.parse_args()
-
     return args
 
 
@@ -94,7 +98,7 @@ def enrich_test(benchmark, model, resume):
     cwe_list = get_cwes(benchmark)
     testset_dir = Path(constant.V2_TESTSET_DIR.format(benchmark=benchmark))
     enhanced_dir = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark))
-    
+    enhanced_dir.mkdir(parents=True, exist_ok=True)
 
     for cwe in cwe_list:
         print(f"Begin working on {cwe}")
@@ -141,8 +145,6 @@ def enrich_test(benchmark, model, resume):
             custom_vul_ids = []
             batch_input_path = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark)) / "batch_input_file" / constant.BATCH_INPUT_NAME.format(cwe=cwe)
             batch_input_path.parent.mkdir(parents=True, exist_ok=True)  # create subfolders if needed
-
-            batch_output_path = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark)) /constant.BATCH_OUTPUT_NAME.format(cwe=cwe)
 
             for cve_item in tqdm(cve_list):
                 if str(cve_item['id']) + 'P' in ckpt_cve_list or str(cve_item['id']) + 'F' in ckpt_cve_list:
@@ -215,14 +217,18 @@ def load_elastic(benchmark):
     KnowledgeE.document_store(cwe_name_list=cwes, V2=True)
 
 
-def search(benchmark, desc, k, learned):
+def search(benchmark, desc, k, learned, dir):
     cwes = get_cwes(benchmark)
     input_dir = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark))
-    output_dir = Path(constant.V2_SEARCH_RESULTS_DIR.format(benchmark=benchmark, k=k, embedder=desc))
-    orig_data_dir = Path(constant.V2_TESTSET_DIR.format(benchmark=benchmark))
+    if dir is None:
+        output_dir = Path(constant.V2_SEARCH_RESULTS_DIR.format(benchmark=benchmark, k=k, embedder=desc))
+    else:
+        output_dir = Path(constant.V2_SEARCH_RESULTS_DIR.format(benchmark=benchmark, k=k, embedder=desc)) / f'{dir}'
 
+    orig_data_dir = Path(constant.V2_TESTSET_DIR.format(benchmark=benchmark))
+    indexes = ["CWE-119", "CWE-416"]
     #define input path, and output path
-    for cwe in cwes:
+    for cwe, index in zip(cwes, indexes):
         print(f"Now searching {cwe}")
         start_time = datetime.now()
 
@@ -237,9 +243,14 @@ def search(benchmark, desc, k, learned):
             test_data = json.load(f)
 
         VulD = VulRAGDetector("gpt-3.5-turbo", "gpt-3.5-turbo", input_path)
-        VulD.update_retrievers(cwe)
-        start_time = datetime.now()
+        
 
+        #CHANGE THIS BACK FOR IT TO WORK CORRECTLY
+        VulD.update_retrievers(index)
+        #DO NOT FORGET TO CHANGE THIS
+
+
+        start_time = datetime.now()
         total_results = []
         total_length = 0
 
@@ -255,18 +266,16 @@ def search(benchmark, desc, k, learned):
             vul_function = VulD.vul_knowledge.get(f"{id}FV")
             non_vul_function = VulD.vul_knowledge.get(f"{id}FN")
 
-            print(f"Now working on {id}\n")
-
             if learned:
                 vul_knowledge_list = VulD.retrieve_learned_knowledge(cwe, vul_code_snippet, vul_purpose, vul_function, k, True)
                 non_vul_knowledge_list = VulD.retrieve_learned_knowledge(cwe, non_vul_code_snippet, non_vul_purpose, non_vul_function, k, True)
+                length = len(vul_knowledge_list) + len(non_vul_knowledge_list)
             else:
                 vul_knowledge_list = VulD.retrieve_knowledge(cwe, vul_code_snippet, vul_purpose, vul_function, k, True)
                 non_vul_knowledge_list = VulD.retrieve_knowledge(cwe, non_vul_code_snippet, non_vul_purpose, non_vul_function, k, True)
+                length = k*6
 
-            length = len(vul_knowledge_list) + len(non_vul_knowledge_list)
             total_length += length
-
             total_results.append({
                 "id": id,
                 "vul_knowledge": vul_knowledge_list,
@@ -274,6 +283,7 @@ def search(benchmark, desc, k, learned):
                 "total_length": length,
             })
 
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(total_results, f, indent=2)
         
@@ -283,12 +293,12 @@ def search(benchmark, desc, k, learned):
         output_log_path = output_dir / "metrics" / f"{cwe}log.json"
         input_log_path = input_dir / 'metrics' / f"{cwe}log.json"
 
-        fill_search_log(f"Searching elasticsearch for {cwe}", 
+        fill_search_log(f"Searching elasticsearch for {cwe} using full fill_blanks methodology", 
                         len(test_data), 
                         total_length, 
                         learned, 
-                        input_log_path, 
-                        output_log_path, 
+                        str(input_log_path), 
+                        str(output_log_path), 
                         runtime, 
                         k)
 
@@ -302,9 +312,82 @@ def search(benchmark, desc, k, learned):
                      )
 
 
+def rerank(benchmark, learned, k, desc, top_N):
 
-def rerank(benchmark):
+    input_dir = Path(constant.V2_SEARCH_RESULTS_DIR.format(benchmark=benchmark, k=k, embedder=desc))
+    output_dir = Path(constant.V2_RERANKED_DATA_DIR.format(benchmark=benchmark))
+    input_log_dir = input_dir / 'metrics'
+    output_log_dir = output_dir / 'metrics'
+    knowledge_dir = Path(constant.V2_ELASTIC_READY_DIR.format(benchmark=benchmark))
 
+    cwes = get_cwes(benchmark)
+
+    indexes = ["CWE-119", "CWE-416"]
+    #define input path, and output path
+    for cwe, index in zip(cwes, indexes):
+        input_file = constant.PROCESSED_OUTPUT.format(cwe=cwe)
+        output_file = constant.PROCESSED_OUTPUT.format(cwe=cwe)
+        input_path = input_dir / input_file
+        output_path = output_dir / output_file  
+        knowledge_path = knowledge_dir / f'gpt-3.5-turbo_{index}_316_pattern_all.json'
+
+        VulD = VulRAGDetector(model_name=desc, summary_model_name=desc,knowledge_path=knowledge_path)
+        VulD.update_retrievers(cwe)
+        
+        VulD.add_test_knowledge(input_path)
+        total_result = []
+        output_len = 0
+        start_time = datetime.now()
+
+        for item in VulD.test_knowledge:
+            id = item["id"]
+            if learned:
+                vul_output = VulD.final_format(item["vul_knowledge"])
+                non_vul_output = VulD.final_format(item["non_vul_knowledge"])
+            else:
+                v_purpose, v_function, v_code = item["vul_knowledge"]
+                nv_purpose, nv_function, nv_code = item["non_vul_knowledge"]
+                
+                v_purpose = [v['cve_id'] for v in sorted(v_purpose.values(), key=lambda x: x['score'], reverse=True)]
+                v_function = [v['cve_id'] for v in sorted(v_function.values(), key=lambda x: x['score'], reverse=True)]
+                v_code = [v['cve_id'] for v in sorted(v_code.values(), key=lambda x: x['score'], reverse=True)]
+                nv_purpose = [v['cve_id'] for v in sorted(nv_purpose.values(), key=lambda x: x['score'], reverse=True)]
+                nv_function = [v['cve_id'] for v in sorted(nv_function.values(), key=lambda x: x['score'], reverse=True)]
+                nv_code = [v['cve_id'] for v in sorted(nv_code.values(), key=lambda x: x['score'], reverse=True)]
+
+                vul_output = VulD.rerank_by_rank(v_purpose, v_function, v_code)
+                non_vul_output = VulD.rerank_by_rank(nv_purpose, nv_function, nv_code)
+                #NEED TO ADD SOME CODE HERE THAT WILL GET THE LIST INTO FINALIZED FORMAT WITH ALL THE INFORMATION
+
+            output_len += len(vul_output) + len(non_vul_output)
+            total_result.append({
+                "id": id,
+                "vul_knowledge": vul_output,
+                "non_vul_knowledge": non_vul_output,
+            })
+        end_time = datetime.now()    
+        runtime = ((end_time - start_time).total_seconds()) / 60 # gets runtime in minutes
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(total_result, f, indent=2)
+
+        fill_search_log(f"Reranking results for {cwe} using full N=10", 
+                len(VulD.test_knowledge), 
+                output_len, 
+                learned, 
+                str(input_log_dir / f"{cwe}log.json"), 
+                str(output_log_dir / f"{cwe}log.json"), 
+                runtime, 
+                k)
+        
+    print("Done reranking all files")
+    merge_search_log((output_dir / "metrics"), 
+                     (input_dir / 'metrics' / "final_log.json"),
+                     learned,
+                     k,
+                     (output_dir / 'metrics' / 'final_log.json')
+                     )
     return 0
 
 
@@ -328,10 +411,10 @@ if __name__ == '__main__':
         load_elastic(args.benchmark)
 
     elif args.action == 'search':
-        search(args.benchmark, args.model, args.top_num, args.learned)
+        search(args.benchmark, args.model, args.top_K, args.learned, args.new_directory)
 
     elif args.action == 'rerank':
-        rerank(args.benchmark, args.resume)
+        rerank(args.benchmark, args.learned, args.top_K, args.model, args.top_N)
 
     elif args.action == 'decision':
         decision(args.benchmark, args.model, args.resume)

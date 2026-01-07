@@ -22,6 +22,8 @@ def merge_batch_logs(batch_dir, prev_batch, model_name):
     run_time = 0
 
     for file in Path(batch_dir).iterdir():
+        if file.name == "final_log.json":
+            continue
         with file.open("r", encoding="utf-8") as f:
             data = json.load(f)
         input_tok += data["input_tokens"] 
@@ -66,6 +68,8 @@ def merge_search_log(search_log_dir, prev_path, embeddings, k_val, output_path):
     runtime = 0
 
     for file in Path(search_log_dir).iterdir():
+        if file.name == "final_log.json":
+            continue
         with file.open("r", encoding="utf-8") as f:
             data = json.load(f)
         searched += data["searched_items"]
@@ -73,19 +77,18 @@ def merge_search_log(search_log_dir, prev_path, embeddings, k_val, output_path):
         runtime += data["runtime"]
 
     entry = copy.deepcopy(constant.SEARCH_LOG_FORMAT)
-    entry["custom_id"] = "Final merged log for searching BEFORE reranking"
+    entry["custom_id"] = "Final merged log for searching BEFORE reranking. Performed using full fill blanks."
     entry["runtime"] = runtime
     entry["searched_items"] = searched
     entry["returned_items"] = returned
     entry["runtime"] = runtime
     entry["embeddings_included"] = embeddings
-    entry["prev_log"] = prev_path
+    entry["prev_log"] = str(prev_path)
     entry["K-value"] = k_val
 
     with output_path.open("a", encoding="utf-8") as f:
         json.dump(entry, f)
         f.write("\n")
-
 
 
 def fill_search_log(id, num_items, returned_items, embeddings, prev_path, output_path, runtime, k_val):

@@ -32,10 +32,10 @@ class VulRAGDetector:
         self.retrieval_rank_weight = retrieval_rank_weight
         self.model_instance = ModelManager.get_model_instance(model_name)
         self.summary_model_instance = ModelManager.get_model_instance(summary_model_name)
-        self.func = None
         self.purp = None
+        self.func = None
         self.code = None
-
+    
     def update_retrievers(self, cwe_name):
         self.func = LLM4DetectionRetrieval(constant.ES_INDEX_NAME_TEMPLATE.format(
             lower_cwe_id = cwe_name.lower(), 
@@ -52,6 +52,9 @@ class VulRAGDetector:
             lower_document_name = kdn.CODE_BEFORE.value.lower()
         ), kdn.CODE_BEFORE.value.lower())
     
+    def add_test_knowledge(self, path):
+        self.test_knowledge = DataUtils.load_json(path)
+
     def rerank_by_rank(self, purpose_result: list, function_result: list, code_result: list):
         '''
         rerank the cve_id by the rank of three results
@@ -74,7 +77,6 @@ class VulRAGDetector:
 
             except Exception as e:
                 logging.error(f"Error: {e}")
-                pdb.set_trace()
 
         cve_id_dict = sorted(cve_id_dict.items(), key = lambda x: x[1], reverse = False)
 
@@ -196,7 +198,7 @@ class VulRAGDetector:
         logging.disable(logging.NOTSET)
 
         if early_exit:
-            return 0
+            return (purpose_answer, function_answer, code_answer)
 
         return self.format_retrieved_answer(purpose_answer, function_answer, code_answer)
 
@@ -211,14 +213,13 @@ class VulRAGDetector:
             )
         return code_list
 
-    def learned_reranker(self, input_dict):
+    def learned_reranker(self, input_dict, top_N=10):
         #create a np.array of the vectors and also create a second array that holds the keys
         ordered_keys = list(input_dict.keys())
         scores_array = np.array([input_dict[key]["scores"] for key in input_dict])
+        
         #iterate through the 5 different models
-        current_dir = os.path.dirname(__file__)
-
-        output_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'output', 'reranker_data')
+        output_dir = constant.V2_LEARNED_RERANKER_DIR.format(benchmark="PairVul")
         models = []
         for fold_idx in range(1,6):
             model_path = os.path.join(output_dir, f"model_fold_{fold_idx}.txt")
@@ -230,7 +231,7 @@ class VulRAGDetector:
         avg_scores = np.mean(all_scores, axis=0)
         #iterate through the returned list and find the 10 highest values after taking the average
         key_score_pairs = list(zip(ordered_keys, avg_scores))
-        top_10_pairs = sorted(key_score_pairs, key=lambda x: x[1], reverse=True)[:10]
+        top_10_pairs = sorted(key_score_pairs, key=lambda x: x[1], reverse=True)[:top_N] 
         #after iterating through all 5 models choose the models with the 10 highest scores and place in dict
         top_10_dict = {k: v for k, v in top_10_pairs}
         
@@ -290,7 +291,6 @@ class VulRAGDetector:
         return self.format_retrieved_answer_by_code(code_before_change_answer, code_after_change_answer)
 
     def fill_blanks(self, purpose_ds, function_ds, code_ds, dicts, queries):
-        
         all_keys = set()
         combined = {}
         for d in dicts:
@@ -369,7 +369,6 @@ class VulRAGDetector:
         purpose_embed_answer = es_purpose.search_embed_cve(query = purpose_embed, idx = 2, filteridx = 2, cve_id=1, top_k=top_N)
         function_embed_answer = es_function.search_embed_cve(query = function_embed, idx = 1, filteridx = 2, cve_id=1, top_k=top_N)        
         code_embed_answer = es_code.search_embed_cve(query = code_embed, idx = 0, filteridx = 2, cve_id=1, top_k=top_N)
-        
         #call fill_blanks
         dicts = [code_answer, code_embed_answer, function_answer, function_embed_answer, purpose_answer, purpose_embed_answer]
         queries = [code_snippet, code_embed, function, function_embed, purpose, purpose_embed]
