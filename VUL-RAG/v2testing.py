@@ -17,6 +17,7 @@ from components.knowledge_extractor import KnowledgeExtractor
 from common.util.track_util import Tracker
 from components.VulRAG import VulRAGDetector
 from common import common_prompt
+from common.constant import KnowledgeDocumentName as kdn
 from common.model_manager import ModelManager
 from common.util.common_util import fill_batch_log, merge_batch_logs, fill_search_log, merge_search_log
 from components.knowledge_extractor import KnowledgeExtractor
@@ -60,6 +61,12 @@ def parse_command_line_arguments():
         help='specifies if a new directory needs to be added'
     )
     parser.add_argument(
+        '--input_dir',
+        default = None,
+        type=str,
+        help='specifies if input comes from a subdirectory'
+    )
+    parser.add_argument(
         '--top_K',
         type=int,
         default=10,
@@ -90,6 +97,39 @@ def parse_command_line_arguments():
     )
     args = parser.parse_args()
     return args
+
+def create_final(rerank_result, VulD, purpose_dict, function_dict, code_dict):
+    knowledge_list = []
+    seen_true_ids = set()  # track added true_ids
+    for item in rerank_result:
+        try:
+            cve_knowledge = VulD.vul_knowledge[item["cve_id"]]
+            for knowledege_item in cve_knowledge:
+                if str(knowledege_item["true_id"]) in purpose_dict \
+                or str(knowledege_item["true_id"]) in function_dict \
+                or str(knowledege_item["true_id"]) in code_dict:
+
+                    if str(knowledege_item["true_id"]) not in seen_true_ids:  # prevent duplicates
+
+                        knowledge_list.append({
+                            "cve_id": knowledege_item.get(kdn.CVE_ID.value), 
+                            "vulnerability_behavior": 
+                            {
+                                kdn.PRECONDITIONS.value: knowledege_item.get(kdn.PRECONDITIONS.value),
+                                kdn.TRIGGER.value: knowledege_item.get(kdn.TRIGGER.value), 
+                                kdn.CODE_BEHAVIOR.value: knowledege_item.get(kdn.CODE_BEHAVIOR.value)
+                            }, 
+                            "solution_behavior": knowledege_item.get(kdn.SOLUTION.value),
+                        })
+                        seen_true_ids.add(str(knowledege_item["true_id"]))  # mark as added
+
+                        break
+
+        except Exception as e:
+            logging.error(f"Error: {e}")
+            logging.error(f"Error cve_id: {item['cve_id']}")
+
+    return knowledge_list
 
 
 def enrich_test(benchmark, model, resume):
@@ -221,9 +261,9 @@ def search(benchmark, desc, k, learned, dir):
     cwes = get_cwes(benchmark)
     input_dir = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark))
     if dir is None:
-        output_dir = Path(constant.V2_SEARCH_RESULTS_DIR.format(benchmark=benchmark, k=k, embedder=desc))
+        output_dir = Path(constant.V2_SEARCH_RESULTS_DIR.format(benchmark=benchmark))
     else:
-        output_dir = Path(constant.V2_SEARCH_RESULTS_DIR.format(benchmark=benchmark, k=k, embedder=desc)) / f'{dir}'
+        output_dir = Path(constant.V2_SEARCH_RESULTS_DIR.format(benchmark=benchmark)) / f'{dir}'
 
     orig_data_dir = Path(constant.V2_TESTSET_DIR.format(benchmark=benchmark))
     indexes = ["CWE-119", "CWE-416"]
@@ -312,10 +352,18 @@ def search(benchmark, desc, k, learned, dir):
                      )
 
 
-def rerank(benchmark, learned, k, desc, top_N):
+def rerank(benchmark, learned, k, desc, top_N, subdir, new_dir):
 
-    input_dir = Path(constant.V2_SEARCH_RESULTS_DIR.format(benchmark=benchmark, k=k, embedder=desc))
-    output_dir = Path(constant.V2_RERANKED_DATA_DIR.format(benchmark=benchmark))
+    if subdir is None:
+        input_dir = Path(constant.V2_SEARCH_RESULTS_DIR.format(benchmark=benchmark))
+    else:
+        input_dir = Path(constant.V2_SEARCH_RESULTS_DIR.format(benchmark=benchmark)) / subdir
+
+    if new_dir is None:
+        output_dir = Path(constant.V2_RERANKED_DATA_DIR.format(benchmark=benchmark))
+    else:
+        output_dir = Path(constant.V2_RERANKED_DATA_DIR.format(benchmark=benchmark)) / f'{new_dir}'
+
     input_log_dir = input_dir / 'metrics'
     output_log_dir = output_dir / 'metrics'
     knowledge_dir = Path(constant.V2_ELASTIC_READY_DIR.format(benchmark=benchmark))
@@ -342,28 +390,32 @@ def rerank(benchmark, learned, k, desc, top_N):
         for item in VulD.test_knowledge:
             id = item["id"]
             if learned:
-                vul_output = VulD.final_format(item["vul_knowledge"])
-                non_vul_output = VulD.final_format(item["non_vul_knowledge"])
+                vul_final = VulD.final_format(item["vul_knowledge"])
+                non_vul_final = VulD.final_format(item["non_vul_knowledge"])
             else:
-                v_purpose, v_function, v_code = item["vul_knowledge"]
-                nv_purpose, nv_function, nv_code = item["non_vul_knowledge"]
+                raw_v_purpose, raw_v_function, raw_v_code = item["vul_knowledge"]
+                raw_nv_purpose, raw_nv_function, raw_nv_code = item["non_vul_knowledge"]
                 
-                v_purpose = [v['cve_id'] for v in sorted(v_purpose.values(), key=lambda x: x['score'], reverse=True)]
-                v_function = [v['cve_id'] for v in sorted(v_function.values(), key=lambda x: x['score'], reverse=True)]
-                v_code = [v['cve_id'] for v in sorted(v_code.values(), key=lambda x: x['score'], reverse=True)]
-                nv_purpose = [v['cve_id'] for v in sorted(nv_purpose.values(), key=lambda x: x['score'], reverse=True)]
-                nv_function = [v['cve_id'] for v in sorted(nv_function.values(), key=lambda x: x['score'], reverse=True)]
-                nv_code = [v['cve_id'] for v in sorted(nv_code.values(), key=lambda x: x['score'], reverse=True)]
+                v_purpose = [v['cve_id'] for v in sorted(raw_v_purpose.values(), key=lambda x: x['score'], reverse=True)]
+                v_function = [v['cve_id'] for v in sorted(raw_v_function.values(), key=lambda x: x['score'], reverse=True)]
+                v_code = [v['cve_id'] for v in sorted(raw_v_code.values(), key=lambda x: x['score'], reverse=True)]
+                nv_purpose = [v['cve_id'] for v in sorted(raw_nv_purpose.values(), key=lambda x: x['score'], reverse=True)]
+                nv_function = [v['cve_id'] for v in sorted(raw_nv_function.values(), key=lambda x: x['score'], reverse=True)]
+                nv_code = [v['cve_id'] for v in sorted(raw_nv_code.values(), key=lambda x: x['score'], reverse=True)]
 
                 vul_output = VulD.rerank_by_rank(v_purpose, v_function, v_code)
                 non_vul_output = VulD.rerank_by_rank(nv_purpose, nv_function, nv_code)
                 #NEED TO ADD SOME CODE HERE THAT WILL GET THE LIST INTO FINALIZED FORMAT WITH ALL THE INFORMATION
-
-            output_len += len(vul_output) + len(non_vul_output)
+                vul_final = create_final(vul_output, VulD, raw_v_purpose, raw_v_function, raw_v_code)
+                non_vul_final = create_final(non_vul_output, VulD, raw_nv_purpose, raw_nv_function, raw_nv_code)
+            
+            output_len = len(vul_final) + len(non_vul_final)
             total_result.append({
                 "id": id,
-                "vul_knowledge": vul_output,
-                "non_vul_knowledge": non_vul_output,
+                "vul_knowledge": vul_final,
+                "non_vul_knowledge": non_vul_final,
+                "vul_code": VulD.vul_knowledge[item["CVE_id"]],
+                "non_vul_code": VulD.vul_knowledge[item["CWE_id"]],
             })
         end_time = datetime.now()    
         runtime = ((end_time - start_time).total_seconds()) / 60 # gets runtime in minutes
@@ -391,7 +443,42 @@ def rerank(benchmark, learned, k, desc, top_N):
     return 0
 
 
-def decision(benchmark):
+def decision(benchmark, subdir, new_dir, model):
+
+    if subdir is None:
+        input_dir = constant.V2_RERANKED_DATA_DIR(benchmark=benchmark)
+    else:
+        input_dir = constant.V2_RERANKED_DATA_DIR(benchmark=benchmark) / subdir
+    
+    if new_dir is None:
+        output_dir = constant.V2_DECISION_RESULTS_DIR.format(benchmark=benchmark)
+    else:
+        output_dir = constant.V2_DECISION_RESULTS_DIR.format(benchmark=benchmark) / new_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
+    cwes = get_cwes(benchmark)
+
+    for cwe in cwes:
+        print(f"Begin working on {cwe}")
+        start_time = datetime.now()
+
+        filename = constant.PROCESSED_OUTPUT.format(cwe=cwe)
+        filepath = input_dir / filename
+
+        with open(filepath, "r", encoding='utf-8') as f:
+            knowledge_list = json.loads(f)
+
+        batch_output_path = Path(constant.V2_DECISION_RESULTS_DIR.format(benchmark=benchmark)) / 'batch_output' / constant.BATCH_OUTPUT_NAME.format(cwe=cwe)
+        batch_input_path = Path(constant.V2_DECISION_RESULTS_DIR.format(benchmark=benchmark)) / "batch_input_file" / constant.BATCH_INPUT_NAME.format(cwe=cwe)
+        batch_input_path.parent.mkdir(parents=True, exist_ok=True)
+        batch_output_path.mkdir(parents=True, exist_ok=True)
+        
+        model_instance = ModelManager.get_model_instance(model)
+
+
+        for item in tqdm(knowledge_list):
+            vul_detect_prompt = common_prompt.VulRAGPrompt.generate_detect_vul_prompt(code_snippet, vul_knowledge)
+            sol_detect_prompt = common_prompt.VulRAGPrompt.generate_detect_sol_prompt(code_snippet, vul_knowledge)
+
 
     return 0
 
@@ -414,7 +501,7 @@ if __name__ == '__main__':
         search(args.benchmark, args.model, args.top_K, args.learned, args.new_directory)
 
     elif args.action == 'rerank':
-        rerank(args.benchmark, args.learned, args.top_K, args.model, args.top_N)
+        rerank(args.benchmark, args.learned, args.top_K, args.model, args.top_N, args.input_dir, args.new_directory)
 
     elif args.action == 'decision':
         decision(args.benchmark, args.model, args.resume)

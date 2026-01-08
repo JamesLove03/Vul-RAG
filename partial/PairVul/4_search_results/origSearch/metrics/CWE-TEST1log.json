@@ -1,0 +1,1 @@
+{"custom_id": "Searching elasticsearch for CWE-TEST1 using full fill_blanks methodology", "runtime": 0.11398816666666667, "searched_items": 5, "returned_items": 300, "embeddings_included": false, "prev_log": "/home/ludhamm/Code/Vul-RAG_Research/Vul-RAG/partial/PairVul/3_enhanced_data/metrics/CWE-TEST1log.json", "K-value": 10}

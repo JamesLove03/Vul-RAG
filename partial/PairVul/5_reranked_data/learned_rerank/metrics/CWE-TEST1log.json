@@ -1,0 +1,1 @@
+{"custom_id": "Reranking results for CWE-TEST1 using full N=10", "runtime": 0.0009622, "searched_items": 5, "returned_items": 20, "embeddings_included": true, "prev_log": "/home/ludhamm/Code/Vul-RAG_Research/Vul-RAG/partial/PairVul/4_search_results/gpt-3.5-turbo_topk=10/metrics/CWE-TEST1log.json", "K-value": 10}
