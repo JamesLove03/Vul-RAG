@@ -56,6 +56,16 @@ class ESRetrieval:
             document_store = self.doc_store
         )
 
+    def set_index(self, new_index:str):
+        self.index = f"{PreSufConstant.DB_NAME_PREFIX_ES.value}{new_index}{PreSufConstant.DB_INDEX_SUFFIX.value}"
+
+        self.doc_store = ElasticsearchDocumentStore(
+            hosts=[f"http://{cfg.ES_CONFIG['host']}:{cfg.ES_CONFIG['port']}"],
+            verify_certs=False,
+            index=self.index,
+            timeout=120,
+        )
+
     def truncate_to_limit(self, text, max_tokens=8192, model="text-embedding-3-small"):
         encoding = tiktoken.encoding_for_model(model)
         tokens = encoding.encode(text)
@@ -88,10 +98,8 @@ class ESRetrieval:
 
     def write_document(self, documents, cwe_name, document_name, batch_size = 512):
         try:
-            self.index = constant.ES_INDEX_NAME_TEMPLATE.format(
-                        lower_cwe_id = cwe_name.lower(), 
-                        lower_document_name = document_name.lower()
-                    )
+
+            self.set_index(constant.ES_INDEX_NAME_TEMPLATE.format(lower_cwe_id=cwe_name.lower(), lower_document_name=document_name.lower()))
 
             keywords = ["gpt_purpose", "code_before_change", "gpt_function"]
             
@@ -106,59 +114,7 @@ class ESRetrieval:
 
             start_time = time.time()
             
-            keyword_to_key = {
-                "preconditions_for_vulnerability": 0,
-                "trigger_condition": 1,
-                "specific_code_behavior_causing_vulnerability": 2,
-                "solution": 3,
-                "gpt_purpose": 4,
-                "gpt_function": 5,
-                "code_before_change": 6,
-                "code_after_change": 7,
-            }
-            key = next((v for k, v in keyword_to_key.items() if k in document_name.lower()), None)
-
-            if key is not None:
-                if key == 0:
-                    print("adding to preconditions")
-                    self.ds_preconditions_for_vulnerability.write_documents(
-                        documents = documents,
-                    )
-                elif key == 1:
-                    print("adding to trigger")
-                    self.ds_trigger_condition.write_documents(
-                        documents = documents,
-                    )
-                elif key == 2:
-                    print("adding to code bahvior")
-                    self.ds_specific_code_behavior_causing_vulnerability.write_documents(
-                        documents = documents,
-                    )
-                elif key == 3:
-                    print("adding to solution")
-                    self.ds_solution.write_documents(
-                        documents = documents,
-                    )
-                elif key == 4:
-                    print("adding to purpose")
-                    self.ds_gpt_purpose.write_documents(
-                        documents = documents,
-                    )
-                elif key == 5:
-                    print("adding to function")
-                    self.ds_gpt_function.write_documents(
-                        documents = documents,
-                    )
-                elif key == 6:
-                    print("adding to code before")
-                    self.ds_code_before_change.write_documents(
-                        documents = documents,
-                    )
-                elif key == 7:
-                    print("adding to code after")
-                    self.ds_code_after_change.write_documents(
-                        documents = documents,
-                    )
+            self.doc_store.write_documents(documents=documents)
 
             # self.document_store.write_documents(
             #     documents = documents,

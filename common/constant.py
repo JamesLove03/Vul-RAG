@@ -100,6 +100,9 @@ GPT_BATCH_TEMPLATE = {"custom_id": "{id}", "method": "POST", "url": "/v1/chat/co
 ANTHROPIC_BATCH_TEMPLATE = {"custom_id": "", "params": {"model": "", "messages": "{message_list}","max_tokens": 0}}
 GEMINI_BATCH_TEMPLATE = {"key": "", "request": { "model": "", "system_instruction": {"parts": [{ "text": "" }] }, "contents": [{"parts": [{"text": "" }], "role": "user"}], "generationConfig": {"maxOutputTokens": 0}}}
 
+DETECTION_RESULTS_SUBDIR = "{model_name}_prompt={prompt}_{info}"
+DETECTION_RESULTS_CWE_DIR = "{cwe}_results"
+DETECTION_OUTPUT_FILENAME = "{k}_maxentries.json"
 VUL_KNOWLEDGE_PATTERN_FILE_NAME = "{model_name}_{cwe_id}_316_pattern_all"
 ES_INDEX_NAME_TEMPLATE = "gpt3_316{lower_cwe_id}_{lower_document_name}"
 TEST_DATA_FILE_NAME = "Linux_kernel_{cwe_id}_clean_data_testset_new"

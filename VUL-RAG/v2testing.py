@@ -95,6 +95,12 @@ def parse_command_line_arguments():
         action = 'store_true',
         help = 'Whether to resume from a checkpoint.'
     )
+    parser.add_argument(
+        '--prompt',
+        type=int,
+        default = 1,
+        help = "determines the exact prompt to use for decision making"
+    )
     args = parser.parse_args()
     return args
 
@@ -252,9 +258,9 @@ def enrich_test(benchmark, model, resume):
 def load_elastic(benchmark):
     cwes = get_cwes(benchmark)
 
-    KnowledgeE = KnowledgeExtractor(model_name = 'gpt-3.5-turbo')
+    KnowledgeE = KnowledgeExtractor(model_name = 'gpt-3.5-turbo', V2=True, benchmark=benchmark)
 
-    KnowledgeE.document_store(cwe_name_list=cwes, V2=True)
+    KnowledgeE.document_store(cwe_name_list=cwes)
 
 
 def search(benchmark, desc, k, learned, dir):
@@ -370,7 +376,11 @@ def rerank(benchmark, learned, k, desc, top_N, subdir, new_dir):
 
     cwes = get_cwes(benchmark)
 
-    indexes = ["CWE-119", "CWE-416"]
+
+
+    indexes = ["CWE-119", "CWE-416"] #FOR TESTING ONLY REMOVE THIS BEFORE REAL RUNS
+
+
     #define input path, and output path
     for cwe, index in zip(cwes, indexes):
         input_file = constant.PROCESSED_OUTPUT.format(cwe=cwe)
@@ -443,45 +453,192 @@ def rerank(benchmark, learned, k, desc, top_N, subdir, new_dir):
     return 0
 
 
-def decision(benchmark, subdir, new_dir, model):
+def decision(benchmark, subdir, model, resume, prompt, description):
 
     if subdir is None:
-        input_dir = constant.V2_RERANKED_DATA_DIR(benchmark=benchmark)
+        input_dir = constant.V2_RERANKED_DATA_DIR.format(benchmark=benchmark)
     else:
-        input_dir = constant.V2_RERANKED_DATA_DIR(benchmark=benchmark) / subdir
-    
-    if new_dir is None:
-        output_dir = constant.V2_DECISION_RESULTS_DIR.format(benchmark=benchmark)
-    else:
-        output_dir = constant.V2_DECISION_RESULTS_DIR.format(benchmark=benchmark) / new_dir
-    output_dir.mkdir(parents=True, exist_ok=True)
+        input_dir = Path(constant.V2_RERANKED_DATA_DIR.format(benchmark=benchmark)) / subdir
+   
     cwes = get_cwes(benchmark)
+
+    model_instance = ModelManager.get_model_instance(model)
 
     for cwe in cwes:
         print(f"Begin working on {cwe}")
-        start_time = datetime.now()
 
-        filename = constant.PROCESSED_OUTPUT.format(cwe=cwe)
+        filename = constant.PROCESSED_OUTPUT.format(cwe=cwe) #open the list of reranked data
         filepath = input_dir / filename
-
         with open(filepath, "r", encoding='utf-8') as f:
-            knowledge_list = json.loads(f)
+            knowledge_list = json.load(f)
 
-        batch_output_path = Path(constant.V2_DECISION_RESULTS_DIR.format(benchmark=benchmark)) / 'batch_output' / constant.BATCH_OUTPUT_NAME.format(cwe=cwe)
-        batch_input_path = Path(constant.V2_DECISION_RESULTS_DIR.format(benchmark=benchmark)) / "batch_input_file" / constant.BATCH_INPUT_NAME.format(cwe=cwe)
-        batch_input_path.parent.mkdir(parents=True, exist_ok=True)
-        batch_output_path.mkdir(parents=True, exist_ok=True)
+        checkpoint_path = PathUtil.checkpoint_data(filename, "pkl")
+
+        snippet_dir = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark)) #open the original code snippets
+        snippet_path = snippet_dir / filename
+        with open(snippet_path, "r", encoding='utf-8') as f:
+            code_snippets = json.load(f)
+
+        testset_path = snippet_dir / 'test_set' / constant.TEST_DATA_FILE_NAME.format(cwe_id=cwe)
+        with open(testset_path.with_suffix(".json"), "r", encoding='utf-8') as f:
+            test_set = json.load(f)
+
+        output_dir = Path(constant.V2_DECISION_RESULTS_DIR.format(benchmark=benchmark)) / constant.DETECTION_RESULTS_SUBDIR.format(model_name = model_instance.get_model_name(), prompt=prompt, info=description) / constant.DETECTION_RESULTS_CWE_DIR.format(cwe=cwe)
+        output_path = output_dir / constant.DETECTION_OUTPUT_FILENAME.format(k=10)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+
+        ckpt_cve_list = []
+        vul_output_list = []
+        non_vul_output_list = []
+        if resume:
+             if os.path.exists(checkpoint_path):
+                ckpt_cve_list = list(DataUtils.load_data_from_pickle_file(checkpoint_path))
+                if os.path.exists(output_path):
+                    data = DataUtils.load_json(output_path)
+                    vul_output_list = data['vul_data']
+                    non_vul_output_list = data['non_vul_data'] #check this
+                else:
+                    # to avoid overwriting the existing output file
+                    raise FileNotFoundError(f"Checkpoint file {checkpoint_path} not found.")
         
-        model_instance = ModelManager.get_model_instance(model)
-
-
         for item in tqdm(knowledge_list):
-            vul_detect_prompt = common_prompt.VulRAGPrompt.generate_detect_vul_prompt(code_snippet, vul_knowledge)
-            sol_detect_prompt = common_prompt.VulRAGPrompt.generate_detect_sol_prompt(code_snippet, vul_knowledge)
+            id = item["id"]
+            vul_knowledge = item["vul_knowledge"]
+            non_vul_knowledge = item["non_vul_knowledge"]
 
+            testset_item = next((item for item in test_set if item["id"] == id), None)
+            vul_code_snippet = testset_item["code_before_change"]
+            non_vul_code_snippet = testset_item["code_after_change"]
+            cve_id = testset_item["cve_id"]
+            matches = {
+                x: v
+                for x, v in code_snippets.items()
+                if "".join(filter(str.isdigit, x)) == str(id)
+            }
+            vul_purpose = next((v for k, v in matches.items() if "PV" in k), None)
+            non_vul_purpose = next((v for k, v in matches.items() if "PN" in k), None)
+            vul_function = next((v for k, v in matches.items() if "FV" in k), None)
+            non_vul_function = next((v for k, v in matches.items() if "FN" in k), None)
+
+            #runs and writes the decision for the vul_snippet
+            vul_output = run_decision(vul_knowledge, vul_code_snippet, cve_id, model_instance, vul_purpose, vul_function, id)
+            vul_output_list.append(vul_output)
+
+            #runs and writes the decision for the non_vul_snippet
+            non_vul_output = run_decision(non_vul_knowledge, non_vul_code_snippet, cve_id, model_instance, non_vul_purpose, non_vul_function, id)
+            non_vul_output_list.append(non_vul_output)
+
+            ckpt_cve_list.append(id)
+            DataUtils.save_json(output_path, {"vul_data": vul_output_list, "non_vul_data": non_vul_output_list})
+
+            #trims the vul snippet
+
+            
 
     return 0
 
+def run_decision(vul_knowledge, code_snippet, query_cve, model_instance, purpose, function, id):
+
+    model_settings_dict = {}
+
+    detect_result = []
+    total_entries = 0
+    lib = 0
+    dec = 0
+    start_time = datetime.now()
+
+    for knowledge in vul_knowledge[:10]:
+        total_entries += 1
+        vul_detect_prompt = common_prompt.VulRAGPrompt.generate_detect_vul_prompt(code_snippet, knowledge)
+        sol_detect_prompt = common_prompt.VulRAGPrompt.generate_detect_sol_prompt(code_snippet, knowledge)
+
+        vul_messages = model_instance.get_messages(vul_detect_prompt, constant.DEFAULT_SYS_PROMPT)
+        sol_messages = model_instance.get_messages(sol_detect_prompt, constant.DEFAULT_SYS_PROMPT)
+        vul_output, v_inp_tokens, v_out_tokens = model_instance.get_response_with_messages(
+                vul_messages,
+                **model_settings_dict
+            )
+        sol_output, s_inp_tokens, s_out_tokens = model_instance.get_response_with_messages(
+                sol_messages,
+                **model_settings_dict
+            )
+
+        inp_tokens = v_inp_tokens + s_inp_tokens
+        out_tokens = v_out_tokens + s_out_tokens
+
+        result = {
+            "vul_knowledge": vul_knowledge,
+            "vul_detect_prompt": vul_detect_prompt,
+            "vul_output": vul_output,
+            "sol_detect_prompt": sol_detect_prompt,
+            "sol_output": sol_output,
+            "input_tokens": inp_tokens,
+            "output_tokens": out_tokens,
+            "runtime": ((start_time - datetime.now()).total_seconds()) / 60
+        }
+        detect_result.append(result)
+
+        if(query_cve == result["vul_knowledge"]["cve_id"]):
+            lib = 1          
+
+        if (constant.LLMResponseKeywords.POS_ANS.value in vul_output and 
+            constant.LLMResponseKeywords.NEG_ANS.value in sol_output):
+            if(query_cve == result["vul_knowledge"]["cve_id"]):
+                dec = 1
+            return {
+                "id": id,
+                "cve_id": query_cve,
+                "purpose": purpose, 
+                "function": function, 
+                "code_snippet": code_snippet, 
+                "detect_result": detect_result, 
+                "detection_model": model_instance.get_model_name(),
+                "summary_model": model_instance.get_model_name(),
+                "model_settings": model_settings_dict,
+                "final_result": 1,
+                "lib_present": lib,
+                "lib_decision": dec,
+                "total_entries": total_entries,
+            }
+        
+        elif constant.LLMResponseKeywords.POS_ANS.value in sol_output:
+            if(query_cve == result["vul_knowledge"]["cve_id"]):
+                dec = 1
+            return {
+                "id": id,
+                "cve_id": query_cve,
+                "purpose": purpose, 
+                "function": function, 
+                "code_snippet": code_snippet, 
+                "detect_result": detect_result, 
+                "detection_model": model_instance.get_model_name(),
+                "summary_model": model_instance.get_model_name(),
+                "model_settings": model_settings_dict,
+                "final_result": 0,
+                "lib_present": lib,
+                "lib_decision": dec,
+                "total_entries": total_entries,
+            }
+        else:
+            continue
+    
+    return {
+            "id": id,
+            "cve_id": query_cve,
+            "purpose": purpose, 
+            "function": function, 
+            "code_snippet": code_snippet, 
+            "detect_result": detect_result, 
+            "detection_model": model_instance.get_model_name(),
+            "summary_model": model_instance.get_model_name(),
+            "model_settings": model_settings_dict,
+            "final_result": 0,
+            "lib_present": lib,
+            "lib_decision": dec,
+            "total_entries": total_entries,
+            }
+            
 
 if __name__ == '__main__':
 
@@ -490,7 +647,6 @@ if __name__ == '__main__':
     if args.action == None:
         raise Exception("Forgot to put an action into this")
     
-
     if args.action == 'enrich_test':
         enrich_test(args.benchmark, args.model, args.resume)
 
@@ -504,7 +660,7 @@ if __name__ == '__main__':
         rerank(args.benchmark, args.learned, args.top_K, args.model, args.top_N, args.input_dir, args.new_directory)
 
     elif args.action == 'decision':
-        decision(args.benchmark, args.model, args.resume)
+        decision(args.benchmark, args.input_dir, args.model, args.resume, args.prompt, args.desc)
 
     else:
         raise Exception("There is an incorrect action verb here")

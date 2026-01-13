@@ -548,14 +548,12 @@ class VulRAGDetector:
             end_time = datetime.now()
             tracker.log("query", (end_time - start_time).total_seconds() * 1000, (s_inp_tokens + v_inp_tokens), (s_out_tokens + v_out_tokens))
 
-
             if(query_cve == result["vul_knowledge"]["cve_id"]):
                 lib = 1
                 lib_counter = counter
                 if (constant.LLMResponseKeywords.POS_ANS.value in vul_output and 
                 constant.LLMResponseKeywords.NEG_ANS.value in sol_output):
                     dec = 1
-
 
             detect_result.append(result)
             if (constant.LLMResponseKeywords.POS_ANS.value in vul_output and 

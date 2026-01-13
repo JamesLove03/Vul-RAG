@@ -138,8 +138,8 @@ class KnowledgeExtractor:
                 messages = self.model_instance.get_messages(analysis_prompt, constant.DEFAULT_SYS_PROMPT)
 
                 if self.V2:
-                    #Add prompts to batch list
-                    poop = fart
+                    #Did not feel necessary to add here
+                    return 0
                 else:
                     processed_ids.add(item["id"])
 
@@ -207,16 +207,12 @@ class KnowledgeExtractor:
 
             #write the output dict and call format_knowledge_file
 
-    def document_store(self, cwe_name_list, V2=False):
+    def document_store(self, cwe_name_list):
         
         for cwe_name in cwe_name_list:
-            if V2:
-                if len(cwe_name_list) == 5:
-                    benchmark = "PairVul"
-                elif len(cwe_name_list) == 10:
-                    benchmark = "TruePairVul"
+            if self.V2:
                 #set doc_path to new path
-                input_dir = Path(constant.V2_ELASTIC_READY_DIR.format(benchmark=benchmark))
+                input_dir = Path(constant.V2_ELASTIC_READY_DIR.format(benchmark=self.benchmark))
                 input_filename = constant.VUL_KNOWLEDGE_PATTERN_FILE_NAME.format(
                         model_name = "gpt-3.5-turbo",
                         cwe_id = cwe_name

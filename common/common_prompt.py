@@ -197,6 +197,38 @@ For example, instead of writing mutex_lock(&dmxdev->mutex), simply use mutex_loc
 # ----------------------- Prompt for VUL-RAG -----------------------
 class VulRAGPrompt:
     @staticmethod
+    def get_vul_prompt_by_key(key, code_snippet, cve_knowledge):
+        
+        prompt_generators = {
+            0: BaselinePrompt.generate_basic_prompt_without_explanation,
+            1: BaselinePrompt.generate_basic_prompt_with_explanation,
+            2: BaselinePrompt.generate_cot_prompt,
+            3: BaselinePrompt.generate_advanced_cot_prompt,
+            4: BaselinePrompt.generate_prompt_with_CWE_description
+        }
+        
+        if key in prompt_generators:
+            return prompt_generators[key](code_snippet, cve_knowledge)
+        else:
+            raise ValueError("Invalid prompt type index.")
+    
+    @staticmethod
+    def get_sol_prompt_by_key(key, code_snippet, cve_knowledge):
+        prompt_generators = {
+                    0: BaselinePrompt.generate_basic_prompt_without_explanation,
+                    1: BaselinePrompt.generate_basic_prompt_with_explanation,
+                    2: BaselinePrompt.generate_cot_prompt,
+                    3: BaselinePrompt.generate_advanced_cot_prompt,
+                    4: BaselinePrompt.generate_prompt_with_CWE_description
+                }
+        
+        if key in prompt_generators:
+            return prompt_generators[key](code_snippet, cve_knowledge)
+        else:
+            raise ValueError("Invalid prompt type index.")
+        
+        
+    @staticmethod
     def generate_detect_vul_prompt(code_snippet, cve_knowledge) -> str:
        return f"""I want you to act as a code analysis expert and determine whether a specific vulnerability exists in a piece of code. Focus on behavioral patterns instead of keyword or syntax matching.
 Here is some relevant information about the vulnerability and how to identify it.
