@@ -1,7 +1,7 @@
 import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
+import pdb
 import logging
 from util.path_util import PathUtil
 from util.data_utils import DataUtils
@@ -299,7 +299,8 @@ def calculate_metrics(**confusion_matrix) -> dict:
     PLE = confusion_matrix.get(mk.PLE.value)
     CLE = confusion_matrix.get(mk.CLE.value)
     WLE = confusion_matrix.get(mk.WLE.value)
-    SPC = confusion_matrix.get(mk.SPC.value)
+    NTP = confusion_matrix.get(mk.NTP.value)
+    ND = confusion_matrix.get(mk.ND.value)
 
     if TN is None or TP is None or FN is None or FP is None:
         logging.error("The confusion matrix must contain TN, TP, FN, and FP.")
@@ -334,7 +335,8 @@ def calculate_metrics(**confusion_matrix) -> dict:
         mk.PLE.value: round(PLE, cfg.METRICS_DECIMAL_PLACES_RESERVED),
         mk.CLE.value: round(CLE, cfg.METRICS_DECIMAL_PLACES_RESERVED),
         mk.WLE.value: round(WLE, cfg.METRICS_DECIMAL_PLACES_RESERVED),
-        mk.SPC.value: round(SPC, cfg.METRICS_DECIMAL_PLACES_RESERVED)
+        mk.NTP.value: round(NTP, cfg.METRICS_DECIMAL_PLACES_RESERVED),
+        mk.ND.value: round(ND, cfg.METRICS_DECIMAL_PLACES_RESERVED)
     }
 
     id_result_map = confusion_matrix.get('id_result_map')
@@ -368,6 +370,10 @@ def calculate_metrics(**confusion_matrix) -> dict:
         result_map[mk.PAC.value] = round(result_map[mk.PAC.value], cfg.METRICS_DECIMAL_PLACES_RESERVED)
         result_map[mk.P1R.value] = round(result_map[mk.P1R.value], cfg.METRICS_DECIMAL_PLACES_RESERVED)
         result_map[mk.P0R.value] = round(result_map[mk.P0R.value], cfg.METRICS_DECIMAL_PLACES_RESERVED)
+        result_map[mk.PR.value] = round((result_map[mk.PLE.value] / (valid_pair_cnt*2)), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+        result_map[mk.CLD.value] = round((result_map[mk.CLE.value] / result_map[mk.PLE.value]), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+        result_map[mk.ILD.value] = round((result_map[mk.WLE.value] / result_map[mk.PLE.value]), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+        result_map[mk.NLD.value] = round((result_map[mk.NLE.value] / result_map[mk.PLE.value]), cfg.METRICS_DECIMAL_PLACES_RESERVED)
 
     return result_map
 
@@ -394,28 +400,30 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
         mk.PLE.value: 0,
         mk.CLE.value: 0,
         mk.WLE.value: 0,
-        mk.SPC.value: 0,
+        mk.NTP.value: 0, 
+        mk.NLE.value: 0, 
+        mk.ND.value: 0,
     }  
     total_valid_pair_cnt = 0
     total_accurate_pair_cnt = 0
     total_pair_1_cnt = 0
     total_pair_0_cnt = 0
-    total_average_pick_spot = 0
-    total_present_rate = 0
-    total_correct_lib_dec_rate = 0
-
+    total_no_decision_made = 0
+    pdb.set_trace()
     for result_file in target_result_file_list:
         print("loading from: ", result_file)
         results = DataUtils.load_json(result_file)
         cfs_mat = {
-            mk.TN.value: 0,
-            mk.TP.value: 0,
-            mk.FN.value: 0,
-            mk.FP.value: 0,
-            mk.PLE.value: 0,
-            mk.CLE.value: 0,
-            mk.WLE.value: 0,
-            mk.SPC.value: 0,
+            mk.TN.value: 0,  #true negative
+            mk.TP.value: 0,  #true positive
+            mk.FN.value: 0,  #false negative
+            mk.FP.value: 0,  #false Positive
+            mk.PLE.value: 0, #Counts the number of items that saw the correct library entry
+            mk.CLE.value: 0, #acted on the correct library entry and got the correct answer
+            mk.WLE.value: 0, #acted on the correct library entry, but got the wrong answer
+            mk.NTP.value: 0, #holds the total number of entries the process handled
+            mk.NLE.value: 0, #holds the number of times the correct library entry had no decision made on it
+            mk.ND.value: 0,  #total number of no decision items
         }
         # the key in the result file is ether xx_data or xx_detect_data
         vul_data = results.get('vul_detect_data', []) + results.get('vul_data', [])
@@ -424,19 +432,22 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
 
         for vul in vul_data:
             try:
+                if vul['final_result'] == -1:
+                    cfs_mat[mk.ND.value] += 1
+
+                if vul["lib_present"] == 1 and vul["lib_decision"] == 0:
+                    cfs_mat[mk.NLE.value] += 1
+
                 if cfg.RESULT_UNIFORM_MAP[vul['final_result']] == 0:
                     cfs_mat[mk.FN.value] += 1
                     if vul['lib_present'] == 1 and vul["lib_decision"] == 1:
                         cfs_mat[mk.WLE.value] += 1
                 else:
                     cfs_mat[mk.TP.value] += 1
-                    if vul['lib_present'] == 1:
-                        if vul['lib_decision'] == 1:
-                            cfs_mat[mk.CLE.value] += 1
-                        elif vul['lib_decision'] == 0:
-                            cfs_mat[mk.WLE.value] += 1
-                
-                cfs_mat[mk.SPC.value] += vul["Counter"]
+                    if vul['lib_present'] == 1 and vul['lib_decision'] == 1:
+                        cfs_mat[mk.CLE.value] += 1
+                        
+                cfs_mat[mk.NTP.value] += vul["total_entries"]
                 
                 if vul["lib_present"] == 1:
                     cfs_mat[mk.PLE.value] += 1
@@ -451,23 +462,24 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
                 mk.GT.value: 1
             }]
 
-
-
         for non_vul in non_vul_data:
             try:
+                if vul['final_result'] == -1:
+                    cfs_mat[mk.ND.value] += 1
+
+                if vul["lib_present"] == 1 and vul["lib_decision"] == 0:
+                    cfs_mat[mk.NLE.value] += 1
+
                 if cfg.RESULT_UNIFORM_MAP[non_vul['final_result']] == 0:
                     cfs_mat[mk.TN.value] += 1
                     if non_vul['lib_present'] == 1 and non_vul["lib_decision"] == 1:
                         cfs_mat[mk.CLE.value] += 1
                 else:
                     cfs_mat[mk.FP.value] += 1
-                    if non_vul['lib_present'] == 1:
-                        if non_vul['lib_decision'] == 1:
-                            cfs_mat[mk.CLE.value] += 1
-                        elif non_vul['lib_decision'] == 0:
-                            cfs_mat[mk.WLE.value] += 1
+                    if non_vul['lib_present'] == 1 and non_vul['lib_decision'] == 1:
+                        cfs_mat[mk.WLE.value] += 1
 
-                cfs_mat[mk.SPC.value] += non_vul["Counter"]
+                cfs_mat[mk.NTP.value] += non_vul["total_entries"]
                 
                 if non_vul["lib_present"] == 1:
                     cfs_mat[mk.PLE.value] += 1
@@ -501,7 +513,6 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
         # logging.info(f"{mk.P1C.value}: {metrics_data.get(mk.P1C.value)}")
         # logging.info(f"{mk.P0C.value}: {metrics_data.get(mk.P0C.value)}")
         # logging.info(f"--------------------------------------------------")
-
         total_cfs_mat[mk.TN.value] += cfs_mat.get(mk.TN.value)
         total_cfs_mat[mk.TP.value] += cfs_mat.get(mk.TP.value)
         total_cfs_mat[mk.FN.value] += cfs_mat.get(mk.FN.value)
@@ -509,13 +520,15 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
         total_cfs_mat[mk.PLE.value] += metrics_data.get(mk.PLE.value)
         total_cfs_mat[mk.CLE.value] += metrics_data.get(mk.CLE.value)
         total_cfs_mat[mk.WLE.value] += metrics_data.get(mk.WLE.value)
-        total_cfs_mat[mk.SPC.value] += metrics_data.get(mk.SPC.value)
-        print("is this it: ", metrics_data.get(mk.VPC.value))
+        total_cfs_mat[mk.NTP.value] += metrics_data.get(mk.NTP.value)
+        total_cfs_mat[mk.NLE.value] += metrics_data.get(mk.NLE.value)
         total_valid_pair_cnt += metrics_data.get(mk.VPC.value)
         total_accurate_pair_cnt += metrics_data.get(mk.APC.value)
         total_pair_1_cnt += metrics_data.get(mk.P1C.value)
-        total_pair_0_cnt += metrics_data.get(mk.P0C.value)
-
+        total_pair_0_cnt += metrics_data.get(mk.P0C.value) 
+        total_no_decision_made += metrics_data.get(mk.ND.value)
+        pdb.set_trace()
+        
         if save_to_file:
             try:
                 check_result_file_legality(result_file)
@@ -534,6 +547,7 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
     print("made it through all the individual files")
     if calculate_total_metrics_flag:
         total_metrics_data = calculate_metrics(**total_cfs_mat)
+        pdb.set_trace()
         total_pair_accuracy = total_accurate_pair_cnt / total_valid_pair_cnt if total_valid_pair_cnt > 0 else -1
         total_pair_accuracy = round(total_pair_accuracy, cfg.METRICS_DECIMAL_PLACES_RESERVED)
         total_metrics_data[mk.VPC.value] = total_valid_pair_cnt
@@ -543,8 +557,10 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
         total_metrics_data[mk.P0R.value] = total_pair_0_cnt / total_valid_pair_cnt if total_valid_pair_cnt > 0 else -1
         total_metrics_data[mk.P1R.value] = round(total_metrics_data[mk.P1R.value], cfg.METRICS_DECIMAL_PLACES_RESERVED)
         total_metrics_data[mk.P0R.value] = round(total_metrics_data[mk.P0R.value], cfg.METRICS_DECIMAL_PLACES_RESERVED)
-        total_metrics_data[mk.APN.value] = round((total_metrics_data[mk.SPC.value] / total_metrics_data[mk.PLE.value]), cfg.METRICS_DECIMAL_PLACES_RESERVED)
-        total_metrics_data[mk.CLR.value] = round((total_metrics_data[mk.CLE.value] / (total_valid_pair_cnt*2)), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+        total_metrics_data[mk.PR.value] = round((total_metrics_data[mk.PLE.value] / (total_valid_pair_cnt*2)), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+        total_metrics_data[mk.CLD.value] = round((total_metrics_data[mk.CLE.value] / total_metrics_data[mk.PLE.value]), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+        total_metrics_data[mk.ILD.value] = round((total_metrics_data[mk.WLE.value] / total_metrics_data[mk.PLE.value]), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+        total_metrics_data[mk.NLD.value] = round((total_metrics_data[mk.NLE.value] / total_metrics_data[mk.PLE.value]), cfg.METRICS_DECIMAL_PLACES_RESERVED)
         logging.info(f"Total Metrics:")
         logging.info(f"{mk.TP.value}: {total_cfs_mat.get(mk.TP.value)}")
         logging.info(f"{mk.TN.value}: {total_cfs_mat.get(mk.TN.value)}")
@@ -575,6 +591,212 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True):
                 f"{second_level_dir_name}_{first_level_dir_name}_all_CWE_metrics.json"
             )
             DataUtils.save_json(total_result_file_name, total_metrics_data)
+
+
+def calculate_additional_metrics(filepath, cwe_list):
+    final_output = {}
+    total_counts = {
+        "Library_Presence": 0,
+        "Library_Correct": 0,
+        "Library_Wrong": 0,
+        "Non_Lib_Correct": 0,
+        "Non_Lib_Incorrect": 0,
+        "Total_Entries": 0,
+        "Average_Rank": 0,
+        "No Choice": 0,
+        "1 Entry": 0,
+        "2 Entry": 0,
+        "3 Entry": 0,
+        "4 Entry": 0,
+        "5 Entry": 0,
+        "6 Entry": 0,
+        "7 Entry": 0,
+        "8 Entry": 0,
+        "9 Entry": 0,
+        "10 Entry": 0,
+        "Pair Accuracy": 0,
+        "Final_Res=0": 0,
+        "Final_Res=1": 0,
+    }
+
+    total_rank_sum = 0
+    id_results_total = {}
+    total_pair_correct = 0
+    total_pair_total = 0
+    for cwe_id in cwe_list:
+        file_name = f"{cwe_id}_gpt-4o.json"
+        #path = filepath / constant.DETECTION_OUTPUT_FILENAME.format(cwe=cwe_id)
+        path = filepath / f"{cwe_id}_gpt-4o.json"
+        rank_sum = 0
+        id_results = {}
+        if not os.path.exists(file_name):
+            print(f"File {file_name} not found. Skipping.")
+            continue
+
+        with open(file_name, 'r') as f:
+            data = json.load(f)
+
+        results = {
+            "Library_Presence": 0,
+            "Library_Correct": 0,
+            "Library_Wrong": 0,
+            "Non_Lib_Correct": 0,
+            "Non_Lib_Incorrect": 0,
+            "Total_Entries": 0,
+            "Average_Rank": 0,
+            "No Choice": 0,
+            "1 Entry": 0,
+            "2 Entry": 0,
+            "3 Entry": 0,
+            "4 Entry": 0,
+            "5 Entry": 0,
+            "6 Entry": 0,
+            "7 Entry": 0,
+            "8 Entry": 0,
+            "9 Entry": 0,
+            "10 Entry": 0,
+            "Pair Accuracy": 0,
+            "Pair_Total": 0,
+            "Pair_Correct": 0,
+            "Pair_Accuracy": 0,
+            "Final_Res=0": 0,
+            "Final_Res=1": 0,
+        }
+
+
+        total_entry_count = 0  # per file
+        
+        for category in ["vul_data", "non_vul_data"]:
+            entries = data.get(category, [])
+            total_entry_count += len(entries)
+
+            for item in entries:
+                cve_id = item.get("cve_id")
+                final_result = item.get("final_result", None)
+                detect_results = item.get("detect_result", [])
+                #this part counts the average appearance of the first matching cve entry
+                rank_of_first_match = 0
+                vul_knowledges = [dr.get("vul_knowledge") for dr in detect_results if "vul_knowledge" in dr]
+                vk_count = len(vul_knowledges)
+                entry_id = item.get("id")
+                if entry_id is None or final_result is None:
+                    continue
+                if entry_id not in id_results:
+                    id_results[entry_id] = {}
+                id_results[entry_id][category] = final_result
+                
+                if final_result == 1:
+                    results["Final_Res=1"] +=1
+                elif final_result == 0:
+                    results["Final_Res=0"] +=1
+                
+                if 1 <= vk_count <= 10:
+                    results[f"{vk_count} Entry"] += 1
+                
+                for idx, dr in enumerate(detect_results):                
+                    vk = dr.get("vul_knowledge")
+                    if vk and vk.get("cve_id") == cve_id:
+                        rank_of_first_match = idx + 1  # 1-based index
+                        break
+                rank_sum += rank_of_first_match
+
+                vul_knowledges = [dr.get("vul_knowledge") for dr in detect_results if "vul_knowledge" in dr]
+                cve_ids_in_knowledge = {vk.get("cve_id") for vk in vul_knowledges if vk}
+                has_match = cve_id in cve_ids_in_knowledge
+                
+                last_match = (
+                    vul_knowledges[-1].get("cve_id") == cve_id
+                    if vul_knowledges and vul_knowledges[-1].get("cve_id")
+                    else False
+                )
+                if last_match:
+                    item["lib_decision"] = 1
+                else:
+                    item["lib_decision"] = 0
+
+                if has_match:
+                    results["Library_Presence"] += 1
+                    item["lib_present"] = 1
+                else:
+                    item["lib_present"] = 0
+                
+                if final_result is None:
+                    print(f"Missing final_result for entry {cve_id}, skipping.")
+                    continue
+                
+                item["Counter"] = 0
+
+                if category == 'vul_data':
+                    if final_result == 1:
+                        if last_match:
+                            results["Library_Correct"] += 1
+                        else:
+                            results["Non_Lib_Correct"] += 1
+                    elif final_result == 0:
+                        if has_match:
+                            results["Library_Wrong"] += 1
+                        elif len(vul_knowledges) != 10:
+                            results["Non_Lib_Incorrect"] += 1
+                        else: 
+                            results["No Choice"] += 1
+                    elif final_result == -1:
+                        results["No Choice"] +=1
+
+                if category == 'non_vul_data':
+                    if final_result == 1:
+                        
+                        if last_match:
+                            results["Library_Wrong"] += 1
+                        else:
+                            results["Non_Lib_Incorrect"] += 1
+                    elif final_result == 0:
+                        if last_match:
+                            results["Library_Correct"] += 1
+                        elif len(vul_knowledges) != 10:
+                            results["Non_Lib_Correct"] += 1
+                        else:
+                            results["No Choice"] += 1
+                    elif final_result == -1:
+                        results["No Choice"] +=1
+
+        with open(file_name, 'w') as f:
+            json.dump(data, f, indent=4)
+
+        
+        pair_total = 0
+        pair_correct = 0
+        for entry_id, res in id_results.items():
+            #if 'vul_data' in res and 'non_vul_data' in res and res['vul_data'] != -1 and res['non_vul_data'] != -1:
+            pair_total += 1
+            if res['vul_data'] == 1 and res['non_vul_data'] == 0:
+                pair_correct += 1
+        results["Pair_Total"] = pair_total
+        results["Pair_Correct"] = pair_correct
+        results["Pair_Accuracy"] = pair_correct / pair_total if pair_total > 0 else 0
+        
+        total_pair_correct += results["Pair_Correct"]
+        total_pair_total += results["Pair_Total"]
+
+        results["Average_Rank"] = rank_sum / results["Library_Presence"]
+        total_rank_sum += rank_sum
+        
+        results["Total_Entries"] = total_entry_count
+        # Accumulate into total counts
+        for key in results:
+            if key in total_counts:
+                total_counts[key] += results[key]
+        final_output[cwe_id] = results
+
+    # Add total summary
+    total_counts["Average_Rank"] = total_rank_sum / total_counts["Library_Presence"]
+    final_output["Total"] = total_counts
+    total_counts["Pair Accuracy"] = total_pair_correct / total_pair_total
+
+    # Write results to lib_results.json
+    with open("lib_results_metrics.json", "w") as f_out:
+        json.dump(final_output, f_out, indent=4)
+
+    print("All counts and totals (including total entries) written to lib_results.json.")
 
 def check_result_file_legality(path):
     CWE_CASE_NUMBER = {

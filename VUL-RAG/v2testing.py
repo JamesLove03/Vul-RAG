@@ -483,8 +483,8 @@ def decision(benchmark, subdir, model, resume, prompt, description):
         with open(testset_path.with_suffix(".json"), "r", encoding='utf-8') as f:
             test_set = json.load(f)
 
-        output_dir = Path(constant.V2_DECISION_RESULTS_DIR.format(benchmark=benchmark)) / constant.DETECTION_RESULTS_SUBDIR.format(model_name = model_instance.get_model_name(), prompt=prompt, info=description) / constant.DETECTION_RESULTS_CWE_DIR.format(cwe=cwe)
-        output_path = output_dir / constant.DETECTION_OUTPUT_FILENAME.format(k=10)
+        output_dir = Path(constant.V2_DECISION_RESULTS_DIR.format(benchmark=benchmark)) / constant.DETECTION_RESULTS_SUBDIR.format(model_name = model_instance.get_model_name(), prompt=prompt, info=description) / constant.DETECTION_RESULTS_CWE_DIR.format(k=10)
+        output_path = output_dir / constant.DETECTION_OUTPUT_FILENAME.format(cwe=cwe)
         output_dir.mkdir(parents=True, exist_ok=True)
 
 
@@ -522,23 +522,26 @@ def decision(benchmark, subdir, model, resume, prompt, description):
             non_vul_function = next((v for k, v in matches.items() if "FN" in k), None)
 
             #runs and writes the decision for the vul_snippet
-            vul_output = run_decision(vul_knowledge, vul_code_snippet, cve_id, model_instance, vul_purpose, vul_function, id)
+            vul_output = run_decision(vul_knowledge, vul_code_snippet, cve_id, model_instance, vul_purpose, vul_function, id, prompt)
             vul_output_list.append(vul_output)
 
             #runs and writes the decision for the non_vul_snippet
-            non_vul_output = run_decision(non_vul_knowledge, non_vul_code_snippet, cve_id, model_instance, non_vul_purpose, non_vul_function, id)
+            non_vul_output = run_decision(non_vul_knowledge, non_vul_code_snippet, cve_id, model_instance, non_vul_purpose, non_vul_function, id, prompt)
             non_vul_output_list.append(non_vul_output)
 
             ckpt_cve_list.append(id)
             DataUtils.save_json(output_path, {"vul_data": vul_output_list, "non_vul_data": non_vul_output_list})
 
-            #trims the vul snippet
+#add logging of the full 10-length item
+
+#add trimming down the item then recalculating the output
+
 
             
 
     return 0
 
-def run_decision(vul_knowledge, code_snippet, query_cve, model_instance, purpose, function, id):
+def run_decision(vul_knowledge, code_snippet, query_cve, model_instance, purpose, function, id, prompt):
 
     model_settings_dict = {}
 
@@ -550,8 +553,8 @@ def run_decision(vul_knowledge, code_snippet, query_cve, model_instance, purpose
 
     for knowledge in vul_knowledge[:10]:
         total_entries += 1
-        vul_detect_prompt = common_prompt.VulRAGPrompt.generate_detect_vul_prompt(code_snippet, knowledge)
-        sol_detect_prompt = common_prompt.VulRAGPrompt.generate_detect_sol_prompt(code_snippet, knowledge)
+        vul_detect_prompt = common_prompt.VulRAGPrompt.get_vul_prompt_by_key(prompt, code_snippet, knowledge)
+        sol_detect_prompt = common_prompt.VulRAGPrompt.get_sol_prompt_by_key(prompt, code_snippet, knowledge)
 
         vul_messages = model_instance.get_messages(vul_detect_prompt, constant.DEFAULT_SYS_PROMPT)
         sol_messages = model_instance.get_messages(sol_detect_prompt, constant.DEFAULT_SYS_PROMPT)
@@ -633,7 +636,7 @@ def run_decision(vul_knowledge, code_snippet, query_cve, model_instance, purpose
             "detection_model": model_instance.get_model_name(),
             "summary_model": model_instance.get_model_name(),
             "model_settings": model_settings_dict,
-            "final_result": 0,
+            "final_result": -1,
             "lib_present": lib,
             "lib_decision": dec,
             "total_entries": total_entries,

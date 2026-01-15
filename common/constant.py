@@ -55,6 +55,11 @@ class MetricsKeywords(Enum):
     APN = "Average Pick Number"
     PR = "Presence Rate"
     CLR = "Correct Lib Decision Rate"
+    NLE = "No Decision on Library Entry"
+    ND = "No Decision"
+    CLD = "Correct Library Decision Rate"
+    ILD = "Incorrect Library Decision Rate"
+    NLD = "No Decision Library Decision Rate"
     
 BATCH_LOG_FORMAT = {"custom_id": "", "batch_runtime": 0, "input_tokens": 0, "output_tokens": 0, "total_batch_items": 0, "model_name": "", "prev_log": ""}
 SEARCH_LOG_FORMAT = {"custom_id": "", "runtime": 0, "searched_items": 0, "returned_items": 0, "embeddings_included": "", "prev_log": "", "K-value": 0}
@@ -101,8 +106,8 @@ ANTHROPIC_BATCH_TEMPLATE = {"custom_id": "", "params": {"model": "", "messages":
 GEMINI_BATCH_TEMPLATE = {"key": "", "request": { "model": "", "system_instruction": {"parts": [{ "text": "" }] }, "contents": [{"parts": [{"text": "" }], "role": "user"}], "generationConfig": {"maxOutputTokens": 0}}}
 
 DETECTION_RESULTS_SUBDIR = "{model_name}_prompt={prompt}_{info}"
-DETECTION_RESULTS_CWE_DIR = "{cwe}_results"
-DETECTION_OUTPUT_FILENAME = "{k}_maxentries.json"
+DETECTION_RESULTS_DIR = "{k}_maxentries_results"
+DETECTION_OUTPUT_FILENAME = "{cwe}.json"
 VUL_KNOWLEDGE_PATTERN_FILE_NAME = "{model_name}_{cwe_id}_316_pattern_all"
 ES_INDEX_NAME_TEMPLATE = "gpt3_316{lower_cwe_id}_{lower_document_name}"
 TEST_DATA_FILE_NAME = "Linux_kernel_{cwe_id}_clean_data_testset_new"

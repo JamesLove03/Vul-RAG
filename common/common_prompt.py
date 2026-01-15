@@ -200,11 +200,12 @@ class VulRAGPrompt:
     def get_vul_prompt_by_key(key, code_snippet, cve_knowledge):
         
         prompt_generators = {
-            0: BaselinePrompt.generate_basic_prompt_without_explanation,
-            1: BaselinePrompt.generate_basic_prompt_with_explanation,
-            2: BaselinePrompt.generate_cot_prompt,
-            3: BaselinePrompt.generate_advanced_cot_prompt,
-            4: BaselinePrompt.generate_prompt_with_CWE_description
+            0: VulRAGPrompt.generate_original_vul_prompt,
+            1: VulRAGPrompt.generate_vul_1_prompt,
+            2: VulRAGPrompt.generate_vul_2_prompt,
+            3: VulRAGPrompt.generate_vul_3_prompt,
+            4: VulRAGPrompt.generate_vul_4_prompt,
+            5: VulRAGPrompt.generate_detect_vul_prompt
         }
         
         if key in prompt_generators:
@@ -215,88 +216,202 @@ class VulRAGPrompt:
     @staticmethod
     def get_sol_prompt_by_key(key, code_snippet, cve_knowledge):
         prompt_generators = {
-                    0: BaselinePrompt.generate_basic_prompt_without_explanation,
-                    1: BaselinePrompt.generate_basic_prompt_with_explanation,
-                    2: BaselinePrompt.generate_cot_prompt,
-                    3: BaselinePrompt.generate_advanced_cot_prompt,
-                    4: BaselinePrompt.generate_prompt_with_CWE_description
+                    0: VulRAGPrompt.generate_original_sol_prompt,
+                    1: VulRAGPrompt.generate_sol_1_prompt,
+                    2: VulRAGPrompt.generate_sol_2_prompt,
+                    3: VulRAGPrompt.generate_sol_3_prompt,
+                    4: VulRAGPrompt.generate_sol_4_prompt,
+                    5: VulRAGPrompt.generate_detect_sol_prompt
                 }
         
         if key in prompt_generators:
             return prompt_generators[key](code_snippet, cve_knowledge)
         else:
             raise ValueError("Invalid prompt type index.")
-        
-        
+    
+    
     @staticmethod
     def generate_detect_vul_prompt(code_snippet, cve_knowledge) -> str:
-       return f"""I want you to act as a code analysis expert and determine whether a specific vulnerability exists in a piece of code. Focus on behavioral patterns instead of keyword or syntax matching.
-Here is some relevant information about the vulnerability and how to identify it.
+       return f"""I want you to act as a code analysis expert, given the following code snippet and related vulnerability knowledge, please detect whether there is a vulnerability in the code snippet. Focus on behavioral patterns instead of keyword or syntax matching.
 Vulnerability Knowledge:
+In a similar code scenario, the following vulnerabilities have been found:
 '''
 {cve_knowledge}
 '''
-Here is the code snippet you will be investigating.
 Code Snippet:
 '''
 {code_snippet}
 '''
-Perform a step-by-step analysis to identify whether the code snippet demonstrates any behaviors or logic similar to what’s described in the vulnerability knowledge. Focus solely on the given information. Do not infer unrelated vulnerabilities or assume a vulnerability without clear evidence. Avoid overgeneralizing the vulnerability knowledge.
-Conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value} 
+Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. Focus solely on the given information. Do not infer unrelated vulnerabilities or assume a vulnerability without clear evidence. Avoid overgeneralizing the vulnerability knowledge.
 Remember we are trying to decide if the provided code is vulnerable to the provided vulnerability only.
 """
 
 
     @staticmethod
-    def generate_detect_sol_prompt(code_snippet, cve_knowledge) -> str:
-        return f"""I want you to act as a code analysis expert and determine whether the specific solution behaviors exist in a piece of code. Focus on behavioral patterns instead of keyword or syntax matching.
-Here is some relevant knowledge on the identified vulnerability and how it has been mitigated in similar cases.
+    def generate_detect_sol_prompt(code_snippet, cve_knowledge):
+        return f"""I want you to act as a code analysis expert and determine whether the necessary solution behaviors in the code snippet, which can prevent the occurrence of related vulnerabilities in the vulnerability knowledge. Focus on behavioral patterns instead of keyword or syntax matching.
 Vulnerability Knowledge:
+In a similar code scenario, the following vulnerabilities have been found:
 '''
 {cve_knowledge}
 '''
-Here is the code that will be evaluated for solutions.
 Code Snippet:
 '''
 {code_snippet}
 '''
-Perform a step-by-step analysis to determine whether the code snippet contains behaviors or logic similar to the solution behaviors described in the Vulnerability Knowledge. Focus only on the given information. Do not infer unrelated vulnerabilities or generic solutions. Avoid assuming a solution is present without clear evidence. Avoid overgeneralizing the vulnerability knowledge.
-Conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. Focus solely on the given information. Do not infer unrelated vulnerabilities or assume a vulnerability without clear evidence. Avoid overgeneralizing the vulnerability knowledge.
 Remember you are trying to determine if the provided code contains the specific solution described in the provided vulnerability knowledge only.
 """
 
+
     @staticmethod
-    def generate_detect_prompt(code_snippet, cve_knowledge) -> str:
-        return f"""I want you to act as a vulnerability detection expert, given the following code snippet and related vulnerability knowledge, please detect whether there is a vulnerability in the code snippet.
-Code Snippet:
-'''
-{code_snippet}
-'''
+    def generate_sol_4_prompt(code_snippet, cve_knowledge):
+        return f"""I want you to act as a code analysis expert and determine whether the necessary solution behaviors in the code snippet, which can prevent the occurrence of related vulnerabilities in the vulnerability knowledge. Focus on behavioral patterns instead of keyword or syntax matching.
 Vulnerability Knowledge:
 In a similar code scenario, the following vulnerabilities have been found:
 '''
 {cve_knowledge}
 '''
-Please use your own knowledge of vulnerabilities in combination with the above vulnerability knowledge to detect whether there is a vulnerability in the code snippet. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Code Snippet:
+'''
+{code_snippet}
+'''
+Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Remember you are trying to determine if the provided code contains the specific solution described in the provided vulnerability knowledge only.
 """
     
-    @staticmethod
-    def generate_detect_vul_prompt_without_explanation(code_snippet, cve_knowledge) -> str:
-        return f"""I want you to act as a vulnerability detection expert, given the following code snippet and related vulnerability knowledge, please detect whether there is a vulnerability in the code snippet.
-Code Snippet:
-'''
-{code_snippet}
-'''
+    def generate_vul_4_prompt(code_snippet, cve_knowledge):
+        return f"""I want you to act as a code analysis expert, given the following code snippet and related vulnerability knowledge, please detect whether there is a vulnerability in the code snippet. Focus on behavioral patterns instead of keyword or syntax matching.
 Vulnerability Knowledge:
 In a similar code scenario, the following vulnerabilities have been found:
 '''
 {cve_knowledge}
 '''
-Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge, answer {rkw.POS_ANS.value} or {rkw.NEG_ANS.value} without explanation.
+Code Snippet:
+'''
+{code_snippet}
+'''
+Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Remember we are trying to decide if the provided code is vulnerable to the provided vulnerability only.
+"""
+
+
+    @staticmethod
+    def generate_vul_3_prompt(code_snippet, cve_knowledge):
+        return f"""I want you to act as a code analysis expert, given the following code snippet and related vulnerability knowledge, please detect whether there is a vulnerability in the code snippet.
+Vulnerability Knowledge:
+In a similar code scenario, the following vulnerabilities have been found:
+'''
+{cve_knowledge}
+'''
+Code Snippet:
+'''
+{code_snippet}
+'''
+Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Remember we are trying to decide if the provided code is vulnerable to the provided vulnerability only.
+"""
+    
+
+    @staticmethod
+    def generate_sol_3_prompt(code_snippet, cve_knowledge):
+        return f"""I want you to act as a code analysis expert and determine whether the necessary solution behaviors in the code snippet, which can prevent the occurrence of related vulnerabilities in the vulnerability knowledge.
+Vulnerability Knowledge:
+In a similar code scenario, the following vulnerabilities have been found:
+'''
+{cve_knowledge}
+'''
+Code Snippet:
+'''
+{code_snippet}
+'''
+Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. 
+Remember you are trying to determine if the provided code contains the specific solution described in the provided vulnerability knowledge only.
+"""
+        
+
+    @staticmethod
+    def generate_vul_2_prompt(code_snippet, cve_knowledge):
+        return f"""I want you to act as a vulnerability detection expert, given the following code snippet and related vulnerability knowledge, please detect whether there is a vulnerability in the code snippet.
+Vulnerability Knowledge:
+In a similar code scenario, the following vulnerabilities have been found:
+'''
+{cve_knowledge}
+'''
+Code Snippet:
+'''
+{code_snippet}
+'''
+Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Remember we are trying to decide if the provided code is vulnerable to the provided vulnerability only.
+"""
+    
+
+    @staticmethod
+    def generate_sol_2_prompt(code_snippet, cve_knowledge):
+        return f"""I want you to act as a vulnerability detection expert, given the following code snippet and related vulnerability knowledge, please detect whether there are necessary solution behaviors in the code snippet, which can prevent the occurrence of related vulnerabilities in the vulnerability knowledge.
+Vulnerability Knowledge:
+In a similar code scenario, the following vulnerabilities have been found:
+'''
+{cve_knowledge}
+'''
+Code Snippet:
+'''
+{code_snippet}
+'''
+Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. 
+Remember you are trying to determine if the provided code contains the specific solution described in the provided vulnerability knowledge only.
+"""
+        
+
+    @staticmethod
+    def generate_vul_1_prompt(code_snippet, cve_knowledge):
+        return f"""I want you to act as a vulnerability detection expert, given the following code snippet and related vulnerability knowledge, please detect whether there is a vulnerability in the code snippet.
+Vulnerability Knowledge:
+In a similar code scenario, the following vulnerabilities have been found:
+'''
+{cve_knowledge}
+'''
+Code Snippet:
+'''
+{code_snippet}
+'''
+Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
 """
 
     @staticmethod
-    def generate_detect_sol_prompt_without_explanation(code_snippet, cve_knowledge) -> str:
+    def generate_sol_1_prompt(code_snippet, cve_knowledge):
+        return f"""I want you to act as a vulnerability detection expert, given the following code snippet and related vulnerability knowledge, please detect whether there are necessary solution behaviors in the code snippet, which can prevent the occurrence of related vulnerabilities in the vulnerability knowledge.
+Vulnerability Knowledge:
+In a similar code scenario, the following vulnerabilities have been found:
+'''
+{cve_knowledge}
+'''
+Code Snippet:
+'''
+{code_snippet}
+'''
+Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+"""
+
+    @staticmethod
+    def generate_original_vul_prompt(code_snippet, cve_knowledge) -> str:
+        return f"""I want you to act as a vulnerability detection expert, given the following code snippet and related vulnerability knowledge, please detect whether there is a vulnerability in the code snippet.
+Code Snippet:
+'''
+{code_snippet}
+'''
+Vulnerability Knowledge:
+In a similar code scenario, the following vulnerabilities have been found:
+'''
+{cve_knowledge}
+'''
+Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+"""
+
+
+    @staticmethod
+    def generate_original_sol_prompt(code_snippet, cve_knowledge) -> str:
         return f"""I want you to act as a vulnerability detection expert, given the following code snippet and related vulnerability knowledge, please detect whether there are necessary solution behaviors in the code snippet, which can prevent the occurrence of related vulnerabilities in the vulnerability knowledge.
 Code Snippet:
 '''
@@ -307,8 +422,11 @@ In a similar code scenario, the following vulnerabilities have been found:
 '''
 {cve_knowledge}
 '''
-Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge, answer {rkw.POS_ANS.value} or {rkw.NEG_ANS.value} without explanation.
+Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
 """
+
+
+    
 
     @staticmethod
     def generate_detect_prompt_for_code_retrieval(code_snippet, vul_code, non_vul_code):

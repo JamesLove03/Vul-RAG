@@ -79,7 +79,6 @@ for cwe_id in cwe_ids:
         entries = data.get(category, [])
         total_entry_count += len(entries)
 
-        
         for item in entries:
             cve_id = item.get("cve_id")
             final_result = item.get("final_result", None)
