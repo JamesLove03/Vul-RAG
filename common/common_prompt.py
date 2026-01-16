@@ -1,5 +1,6 @@
 from constant import LLMResponseKeywords as rkw
 from constant import LLMResponseSeparator as rsep
+from constant import LLMConfidenceGenerator as conf
 import constant
 from typing import Literal
 
@@ -242,7 +243,7 @@ Code Snippet:
 '''
 {code_snippet}
 '''
-Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. Focus solely on the given information. Do not infer unrelated vulnerabilities or assume a vulnerability without clear evidence. Avoid overgeneralizing the vulnerability knowledge.
+Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. {conf.CONFIDENCE.value}. {conf.CONFIDENCE} Focus solely on the given information. Do not infer unrelated vulnerabilities or assume a vulnerability without clear evidence. Avoid overgeneralizing the vulnerability knowledge.
 Remember we are trying to decide if the provided code is vulnerable to the provided vulnerability only.
 """
 
@@ -259,7 +260,7 @@ Code Snippet:
 '''
 {code_snippet}
 '''
-Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. Focus solely on the given information. Do not infer unrelated vulnerabilities or assume a vulnerability without clear evidence. Avoid overgeneralizing the vulnerability knowledge.
+Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. {conf.CONFIDENCE} Focus solely on the given information. Do not infer unrelated vulnerabilities or assume a vulnerability without clear evidence. Avoid overgeneralizing the vulnerability knowledge.
 Remember you are trying to determine if the provided code contains the specific solution described in the provided vulnerability knowledge only.
 """
 
@@ -276,7 +277,7 @@ Code Snippet:
 '''
 {code_snippet}
 '''
-Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. {conf.CONFIDENCE}
 Remember you are trying to determine if the provided code contains the specific solution described in the provided vulnerability knowledge only.
 """
     
@@ -291,7 +292,7 @@ Code Snippet:
 '''
 {code_snippet}
 '''
-Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. {conf.CONFIDENCE}
 Remember we are trying to decide if the provided code is vulnerable to the provided vulnerability only.
 """
 
@@ -308,7 +309,7 @@ Code Snippet:
 '''
 {code_snippet}
 '''
-Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. {conf.CONFIDENCE}
 Remember we are trying to decide if the provided code is vulnerable to the provided vulnerability only.
 """
     
@@ -325,7 +326,7 @@ Code Snippet:
 '''
 {code_snippet}
 '''
-Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. 
+Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. {conf.CONFIDENCE}
 Remember you are trying to determine if the provided code contains the specific solution described in the provided vulnerability knowledge only.
 """
         
@@ -342,7 +343,7 @@ Code Snippet:
 '''
 {code_snippet}
 '''
-Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. {conf.CONFIDENCE}
 Remember we are trying to decide if the provided code is vulnerable to the provided vulnerability only.
 """
     
@@ -359,7 +360,7 @@ Code Snippet:
 '''
 {code_snippet}
 '''
-Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. 
+Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. {conf.CONFIDENCE} 
 Remember you are trying to determine if the provided code contains the specific solution described in the provided vulnerability knowledge only.
 """
         
@@ -376,7 +377,7 @@ Code Snippet:
 '''
 {code_snippet}
 '''
-Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. {conf.CONFIDENCE}
 """
 
     @staticmethod
@@ -391,7 +392,7 @@ Code Snippet:
 '''
 {code_snippet}
 '''
-Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. {conf.CONFIDENCE}
 """
 
     @staticmethod
@@ -406,7 +407,7 @@ In a similar code scenario, the following vulnerabilities have been found:
 '''
 {cve_knowledge}
 '''
-Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Please check if the above code snippet contains vulnerability behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. {conf.CONFIDENCE}
 """
 
 
@@ -422,11 +423,9 @@ In a similar code scenario, the following vulnerabilities have been found:
 '''
 {cve_knowledge}
 '''
-Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}.
+Please check if the above code snippet contains solution behaviors mentioned in the vulnerability knowledge. Perform a step-by-step analysis and conclude your response with either {rsep.ANSWER_SEP.value} {rkw.POS_ANS.value} {rsep.ANSWER_SEP.value} or {rsep.ANSWER_SEP.value} {rkw.NEG_ANS.value} {rsep.ANSWER_SEP.value}. {conf.CONFIDENCE}
 """
 
-
-    
 
     @staticmethod
     def generate_detect_prompt_for_code_retrieval(code_snippet, vul_code, non_vul_code):

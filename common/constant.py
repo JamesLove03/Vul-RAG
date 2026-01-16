@@ -25,6 +25,9 @@ class LLMResponseKeywords(Enum):
     POS_ANS = "YES"
     NEG_ANS = "NO"
 
+class LLMConfidenceGenerator(Enum):
+    CONFIDENCE = "Also provide your own self-assessed confidence in your answer as a number between 0 and 1 in the following format. CONFIDENCE: <value>"
+
 class MetricsKeywords(Enum):
     FN = "False Negative"
     FP = "False Positive"
@@ -57,10 +60,28 @@ class MetricsKeywords(Enum):
     CLR = "Correct Lib Decision Rate"
     NLE = "No Decision on Library Entry"
     ND = "No Decision"
-    CLD = "Correct Library Decision Rate"
+    IA = "Informed Accuracy"
     ILD = "Incorrect Library Decision Rate"
     NLD = "No Decision Library Decision Rate"
+    MA = "Misinformed Accuracy"
+    RT = "Runtime"
+    SCS = "Sum Sol Confidence At Pick #{num}"
+    ASCS = "Average Sol Confidence At Pick #{num}"
+    VCS = "Sum Vul Confidence At Pick #{num}"
+    AVCS = "Average Vul Confidence At Pick #{num}"
+    EN = "Items At Entry #{num}"
+    IT = "Input Tokens"
+    OT = "Output Tokens"
+    TSC = "Total Sol Confidence"
+    ATSC = "Average Total Sol Confidence"
+    TVC = "Total Vul Confidence"
+    ATVC = "Average Total Vul Confidence"
+    MDR = "Misinformed Decision Rate"
+    IDR = "Informed Decision Rate"
+    NDC = "No Decision Correct"
+    NDR = "No Decision Rate"
     
+
 BATCH_LOG_FORMAT = {"custom_id": "", "batch_runtime": 0, "input_tokens": 0, "output_tokens": 0, "total_batch_items": 0, "model_name": "", "prev_log": ""}
 SEARCH_LOG_FORMAT = {"custom_id": "", "runtime": 0, "searched_items": 0, "returned_items": 0, "embeddings_included": "", "prev_log": "", "K-value": 0}
 

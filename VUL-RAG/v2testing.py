@@ -9,7 +9,9 @@ import pdb
 from datetime import datetime
 
 from tqdm import tqdm
+import re
 from common import constant
+import copy
 from pathlib import Path
 from common.util.path_util import PathUtil
 from common.util.data_utils import DataUtils
@@ -19,7 +21,7 @@ from components.VulRAG import VulRAGDetector
 from common import common_prompt
 from common.constant import KnowledgeDocumentName as kdn
 from common.model_manager import ModelManager
-from common.util.common_util import fill_batch_log, merge_batch_logs, fill_search_log, merge_search_log
+from common.util.common_util import fill_batch_log, merge_batch_logs, fill_search_log, merge_search_log, calculate_VD_metrics
 from components.knowledge_extractor import KnowledgeExtractor
 from components.VulRAG import VulRAGDetector
 
@@ -483,7 +485,7 @@ def decision(benchmark, subdir, model, resume, prompt, description):
         with open(testset_path.with_suffix(".json"), "r", encoding='utf-8') as f:
             test_set = json.load(f)
 
-        output_dir = Path(constant.V2_DECISION_RESULTS_DIR.format(benchmark=benchmark)) / constant.DETECTION_RESULTS_SUBDIR.format(model_name = model_instance.get_model_name(), prompt=prompt, info=description) / constant.DETECTION_RESULTS_CWE_DIR.format(k=10)
+        output_dir = Path(constant.V2_DECISION_RESULTS_DIR.format(benchmark=benchmark)) / constant.DETECTION_RESULTS_SUBDIR.format(model_name = model_instance.get_model_name(), prompt=prompt, info=description) / constant.DETECTION_RESULTS_DIR.format(k=10)
         output_path = output_dir / constant.DETECTION_OUTPUT_FILENAME.format(cwe=cwe)
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -532,14 +534,69 @@ def decision(benchmark, subdir, model, resume, prompt, description):
             ckpt_cve_list.append(id)
             DataUtils.save_json(output_path, {"vul_data": vul_output_list, "non_vul_data": non_vul_output_list})
 
-#add logging of the full 10-length item
-
-#add trimming down the item then recalculating the output
+    #calculate metrics and trim down item
+    cut_down(output_dir)
 
 
             
 
     return 0
+
+def cut_down(output_dir):
+    num_list = [5, 3, 1]
+
+    calculate_VD_metrics(output_dir, max_items=10, V2=True)
+
+    for item in os.listdir(output_dir):
+        filepath = os.path.join(output_dir, item)
+        with open(filepath, "r", encoding='utf-8') as f:
+            data = json.load(f)
+
+        original_results = data["detect_result"]
+
+        parent_dir = Path(output_dir).parent
+
+        for num in num_list:
+            new_data = copy.deepcopy(data)
+
+            new_data["detect_result"] = original_results[:num]
+
+            cve_list = [
+                entry["vul_knowledge"]["cve_id"]
+                for entry in new_data["detect_result"]
+            ]
+            new_data["lib_present"] = 1 if new_data["cve_id"] in cve_list else 0
+
+            last_id = new_data["detect_result"][-1]["vul_knowledge"]["cve_id"]
+            new_data["lib_decision"] = 1 if last_id == new_data["cve_id"] else 0
+
+            new_output_dir = parent_dir / constant.DETECTION_RESULTS_DIR.format(k=num)
+            new_output_dir.mkdir(parents=True, exist_ok=True)
+            new_path = new_output_dir / item
+
+            with open(new_path, "w", encoding='utf-8') as fw:
+                json.dump(new_data, fw, indent=4, ensure_ascii=False)
+
+    for num in num_list:
+        calculate_VD_metrics(parent_dir / constant.DETECTION_RESULTS_DIR.format(k=num), max_items=num, V2=True)
+
+
+def extract_confidence(text: str):
+    """
+    Extracts confidence value from a model's plaintext response.
+    Returns a float between 0 and 1. Defaults to None if not found.
+    """
+    # Look for 'confidence 85%' or 'confidence: 0.85' patterns
+    match = re.search(r'CONFIDENCE[:\s]*([\d.]+)', text)
+    if match:
+        val_str = match.group(1).rstrip('%')
+        val = float(val_str)        # Convert percent to 0-1 if needed
+        if val > 1:
+            val = val / 100.0
+        return val
+    return 0
+
+
 
 def run_decision(vul_knowledge, code_snippet, query_cve, model_instance, purpose, function, id, prompt):
 
@@ -570,6 +627,11 @@ def run_decision(vul_knowledge, code_snippet, query_cve, model_instance, purpose
         inp_tokens = v_inp_tokens + s_inp_tokens
         out_tokens = v_out_tokens + s_out_tokens
 
+        sol_confidence = extract_confidence(sol_output)
+        vul_confidence = extract_confidence(vul_output)
+        if sol_confidence == 0 or vul_confidence == 0:
+            pdb.set_trace()
+
         result = {
             "vul_knowledge": vul_knowledge,
             "vul_detect_prompt": vul_detect_prompt,
@@ -578,7 +640,9 @@ def run_decision(vul_knowledge, code_snippet, query_cve, model_instance, purpose
             "sol_output": sol_output,
             "input_tokens": inp_tokens,
             "output_tokens": out_tokens,
-            "runtime": ((start_time - datetime.now()).total_seconds()) / 60
+            "runtime": ((datetime.now() - start_time).total_seconds()) / 60,
+            "vul_confidence": vul_confidence,
+            "sol_confidence": sol_confidence
         }
         detect_result.append(result)
 
