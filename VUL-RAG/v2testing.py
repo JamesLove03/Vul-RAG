@@ -525,10 +525,12 @@ def decision(benchmark, subdir, model, resume, prompt, description):
 
             #runs and writes the decision for the vul_snippet
             vul_output = run_decision(vul_knowledge, vul_code_snippet, cve_id, model_instance, vul_purpose, vul_function, id, prompt)
+            vul_output = set_brier(vul_output, 1)
             vul_output_list.append(vul_output)
 
             #runs and writes the decision for the non_vul_snippet
             non_vul_output = run_decision(non_vul_knowledge, non_vul_code_snippet, cve_id, model_instance, non_vul_purpose, non_vul_function, id, prompt)
+            non_vul_output = set_brier(non_vul_output, 0)
             non_vul_output_list.append(non_vul_output)
 
             ckpt_cve_list.append(id)
@@ -568,7 +570,18 @@ def cut_down(output_dir):
             new_data["lib_present"] = 1 if new_data["cve_id"] in cve_list else 0
 
             last_id = new_data["detect_result"][-1]["vul_knowledge"]["cve_id"]
-            new_data["lib_decision"] = 1 if last_id == new_data["cve_id"] else 0
+            
+            last_vul_output = new_data["detect_result"][-1]["vul_output"]
+            last_sol_output = new_data["detect_result"][-1]["sol_output"]
+
+            no_decision = False
+            if constant.LLMResponseKeywords.NEG_ANS.value in last_vul_output and constant.LLMResponseKeywords.NEG_ANS.value in last_sol_output:
+                no_decision = True
+
+            if last_id == new_data["cve_id"] and no_decision is False:
+                new_data["lib_decision"] = 1  
+            else:
+                new_data["lib_decision"] = 0
 
             new_output_dir = parent_dir / constant.DETECTION_RESULTS_DIR.format(k=num)
             new_output_dir.mkdir(parents=True, exist_ok=True)
@@ -578,7 +591,7 @@ def cut_down(output_dir):
                 json.dump(new_data, fw, indent=4, ensure_ascii=False)
 
     for num in num_list:
-        calculate_VD_metrics(parent_dir / constant.DETECTION_RESULTS_DIR.format(k=num), max_items=num, V2=True)
+        calculate_VD_metrics(str(parent_dir / constant.DETECTION_RESULTS_DIR.format(k=num)), max_items=num, V2=True)
 
 
 def extract_confidence(text: str):
@@ -596,7 +609,43 @@ def extract_confidence(text: str):
         return val
     return 0
 
+def set_brier(items, truth): #this function adds 4 brier scores (Vul Acc brier, Sol Acc Brier, Vul Dec brier, Sol Dec Brier)
 
+    if items["final_result"] == -1:
+        items["vul_brier"] = 0
+        items["sol_brier"] = 0
+        return items
+
+    final_result = items["detect_result"][-1]
+    vul_conf = final_result["vul_confidence"]
+    sol_conf = final_result["sol_confidence"]
+
+    if truth == 1:
+        if (constant.LLMResponseKeywords.POS_ANS.value in final_result["vul_output"]):
+            vul_brier = (vul_conf - 1) ** 2
+        else:
+                vul_brier = (vul_conf - 0) ** 2
+        
+        if (constant.LLMResponseKeywords.POS_ANS.value in final_result["sol_output"]):
+            sol_brier = (sol_conf - 0) ** 2
+        else:
+            sol_brier = (sol_conf - 1) ** 2
+
+    elif truth == 0:
+        if (constant.LLMResponseKeywords.NEG_ANS.value in final_result["vul_output"]):
+            vul_brier = (vul_conf - 1) ** 2
+        else:
+                vul_brier = (vul_conf - 0) ** 2
+        
+        if (constant.LLMResponseKeywords.NEG_ANS.value in final_result["sol_output"]):
+            sol_brier = (sol_conf - 0) ** 2
+        else:
+            sol_brier = (sol_conf - 1) ** 2
+    
+    items["vul_brier"] = vul_brier
+    items["sol_brier"] = sol_brier
+
+    return items
 
 def run_decision(vul_knowledge, code_snippet, query_cve, model_instance, purpose, function, id, prompt):
 
@@ -642,17 +691,16 @@ def run_decision(vul_knowledge, code_snippet, query_cve, model_instance, purpose
             "output_tokens": out_tokens,
             "runtime": ((datetime.now() - start_time).total_seconds()) / 60,
             "vul_confidence": vul_confidence,
-            "sol_confidence": sol_confidence
+            "sol_confidence": sol_confidence,
         }
         detect_result.append(result)
-
+        
         if(query_cve == result["vul_knowledge"]["cve_id"]):
             lib = 1          
-
         if (constant.LLMResponseKeywords.POS_ANS.value in vul_output and 
             constant.LLMResponseKeywords.NEG_ANS.value in sol_output):
             if(query_cve == result["vul_knowledge"]["cve_id"]):
-                dec = 1
+                dec = 1            
             return {
                 "id": id,
                 "cve_id": query_cve,

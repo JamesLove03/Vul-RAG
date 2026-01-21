@@ -80,7 +80,16 @@ class MetricsKeywords(Enum):
     IDR = "Informed Decision Rate"
     NDC = "No Decision Correct"
     NDR = "No Decision Rate"
-    
+    VDB = "Vul Decision Brier Score"
+    SDB = "Sol Decision Brier Score"
+    AVB = "Abstention Vul Brier Score"
+    ASB = "Abstention Sol Brier Score"
+    DBVS = "Decision Brier Vul Sum"
+    DBSS = "Decision Brier Sol Sum"
+    VBS = "Vul Brier Sum"
+    SBS = "Sol Brier Sum"
+    VB = "Vul Brier Score"
+    SB = "Sol Brier Score"
 
 BATCH_LOG_FORMAT = {"custom_id": "", "batch_runtime": 0, "input_tokens": 0, "output_tokens": 0, "total_batch_items": 0, "model_name": "", "prev_log": ""}
 SEARCH_LOG_FORMAT = {"custom_id": "", "runtime": 0, "searched_items": 0, "returned_items": 0, "embeddings_included": "", "prev_log": "", "K-value": 0}

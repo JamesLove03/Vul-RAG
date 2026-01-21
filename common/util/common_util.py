@@ -300,6 +300,8 @@ def calculate_metrics(**confusion_matrix) -> dict:
     NDC = confusion_matrix.get(mk.NDC.value)
     ND = confusion_matrix.get(mk.ND.value)
     PLE = confusion_matrix.get(mk.PLE.value)
+    VBS = confusion_matrix.get(mk.VBS.value)
+    SBS = confusion_matrix.get(mk.SBS.value)
     
 
     if TN is None or TP is None or FN is None or FP is None:
@@ -332,6 +334,10 @@ def calculate_metrics(**confusion_matrix) -> dict:
     TN_rate = TN / (TP + TN + FP + FN) if (TP + TN + FP + FN) > 0 else -1
     TP_rate = TP / (TP + TN + FP + FN) if (TP + TN + FP + FN) > 0 else -1
 
+    #add brier scores and average items
+    avg_vul_brier = VBS / (num_entries - ND)
+    avg_sol_brier = SBS / (num_entries - ND)
+
     result_map = {
         mk.PC.value: round(precision, cfg.METRICS_DECIMAL_PLACES_RESERVED),
         mk.RC.value: round(recall, cfg.METRICS_DECIMAL_PLACES_RESERVED),
@@ -346,7 +352,9 @@ def calculate_metrics(**confusion_matrix) -> dict:
         mk.MDR.value: round(misinformed_rate, cfg.METRICS_DECIMAL_PLACES_RESERVED),
         mk.IDR.value: round(informed_rate, cfg.METRICS_DECIMAL_PLACES_RESERVED),
         mk.NDR.value: round(no_dec_rate, cfg.METRICS_DECIMAL_PLACES_RESERVED),
-        mk.PR.value: round(presence_rate, cfg.METRICS_DECIMAL_PLACES_RESERVED)
+        mk.PR.value: round(presence_rate, cfg.METRICS_DECIMAL_PLACES_RESERVED),
+        mk.VB.value: round(avg_vul_brier, cfg.METRICS_DECIMAL_PLACES_RESERVED),
+        mk.SB.value: round(avg_sol_brier, cfg.METRICS_DECIMAL_PLACES_RESERVED)
     }
 
     if mk.TSC.value in confusion_matrix:
@@ -360,7 +368,7 @@ def calculate_metrics(**confusion_matrix) -> dict:
             skey = mk.SCS.value.format(num = i)
             vkey = mk.VCS.value.format(num = i)
             if skey in confusion_matrix:
-                result_map[mk.ASCS.value.format(num = i)] = confusion_matrix.get(skey) / confusion_matrix.get(mk.EN.value.format(num=i))
+                result_map[mk.ASCS.value.format(num=i)] = confusion_matrix.get(skey) / confusion_matrix.get(mk.EN.value.format(num=i))
                 result_map[mk.AVCS.value.format(num=i)] = confusion_matrix.get(vkey) / confusion_matrix.get(mk.EN.value.format(num=i))
             else:
                 break
@@ -425,7 +433,9 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True, max
         mk.NTP.value: 0, 
         mk.NLE.value: 0, 
         mk.ND.value: 0,
-        mk.NDC.value: 0
+        mk.NDC.value: 0,
+        mk.VBS.value: 0,
+        mk.SBS.value: 0,
     }  
 
     for i in range(1, max_items + 1):
@@ -459,8 +469,11 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True, max
             mk.NTP.value: 0, #holds the total number of entries the process handled
             mk.NLE.value: 0, #holds the number of times the correct library entry had no decision made on it
             mk.ND.value: 0,  #total number of no decision items
-            mk.NDC.value: 0  #number of items that had no decision and were marked correct
+            mk.NDC.value: 0,  #number of items that had no decision and were marked correct
         }
+        vul_brier_sum = 0
+        sol_brier_sum = 0
+
         for i in range(1, max_items + 1):
             cfs_mat[mk.EN.value.format(num=i)] = 0
             if V2:
@@ -485,15 +498,22 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True, max
                 cfs_mat[mk.EN.value.format(num=code_len)] += 1
 
                 if V2:
+                    vul_brier_sum += vul["vul_brier"]
+                    sol_brier_sum += vul["sol_brier"]
+
+                    if vul['final_result'] != -1:
+                        final_item = vul['detect_result'][-1]
+                        cfs_mat[mk.TVC.value] += final_item["vul_confidence"]
+                        cfs_mat[mk.TSC.value] += final_item["sol_confidence"]
+                        cfs_mat[mk.VCS.value.format(code_len)] += final_item["vul_confidence"]
+                        cfs_mat[mk.SCS.value.format(code_len)] += final_item["sol_confidence"]
+
                     for i, item in enumerate(vul["detect_result"]):
                         cfs_mat[mk.RT.value] += item["runtime"]
-                        cfs_mat[mk.IT.value] += item["input_tokens"]
-                        cfs_mat[mk.OT.value] += item["output_tokens"]
-                        cfs_mat[mk.TVC.value] += item["vul_confidence"]
-                        cfs_mat[mk.TSC.value] += item["sol_confidence"]
-                        cfs_mat[mk.VCS.value.format(num=i)] += item["vul_confidence"]
-                        cfs_mat[mk.SCS.value.format(num=i)] += item["sol_confidence"]
-                    
+                        cfs_mat[mk.IT.value] += item[mk.IT.value]
+                        cfs_mat[mk.OT.value] += item[mk.OT.value]
+                        
+                        
                 if vul['final_result'] == -1:
                     cfs_mat[mk.ND.value] += 1
 
@@ -532,16 +552,24 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True, max
                 cfs_mat[mk.NTP.value] += code_len
                 cfs_mat[mk.EN.value.format(num=code_len)] += 1
 
+
                 if V2:
+                    vul_brier_sum += non_vul["vul_brier"]
+                    sol_brier_sum += non_vul["sol_brier"]
+
+                    if non_vul['final_result'] != -1:
+                        final_item = non_vul['detect_result'][-1]
+                        cfs_mat[mk.TVC.value] += final_item["vul_confidence"]
+                        cfs_mat[mk.TSC.value] += final_item["sol_confidence"]
+                        cfs_mat[mk.VCS.value.format(code_len)] += final_item["vul_confidence"]
+                        cfs_mat[mk.SCS.value.format(code_len)] += final_item["sol_confidence"]
+
                     for i, item in enumerate(non_vul["detect_result"]):
                         cfs_mat[mk.RT.value] += item["runtime"]
                         cfs_mat[mk.IT.value] += item[mk.IT.value]
                         cfs_mat[mk.OT.value] += item[mk.OT.value]
-                        cfs_mat[mk.TVC.value] += item["vul_confidence"]
-                        cfs_mat[mk.TSC.value] += item["sol_confidence"]
-                        cfs_mat[mk.VCS.value.format(num=i)] += item["vul_confidence"]
-                        cfs_mat[mk.SCS.value.format(num=i)] += item["sol_confidence"]
-
+                                             
+                        
                 if non_vul["lib_present"] == 1 and non_vul["lib_decision"] == 0:
                     cfs_mat[mk.NLE.value] += 1
 
@@ -566,6 +594,8 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True, max
                 mk.PD.value: cfg.RESULT_UNIFORM_MAP[non_vul['final_result']],
                 mk.GT.value: 0
             })
+            cfs_mat[mk.VBS.value] = vul_brier_sum
+            cfs_mat[mk.SBS.value] = sol_brier_sum
         metrics_data = calculate_metrics(**cfs_mat, id_result_map = id_result_map)
         # logging.info(f"Result File: {result_file}")
         # logging.info(f"{mk.TP.value}: {cfs_mat.get(mk.TP.value)}")
@@ -597,6 +627,8 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True, max
             total_cfs_mat[mk.OT.value] += cfs_mat.get(mk.OT.value)
             total_cfs_mat[mk.TVC.value] += cfs_mat.get(mk.TVC.value)
             total_cfs_mat[mk.TSC.value] += cfs_mat.get(mk.TSC.value)
+            total_cfs_mat[mk.VBS.value] += cfs_mat.get(mk.VBS.value)
+            total_cfs_mat[mk.SBS.value] += cfs_mat.get(mk.SBS.value)
 
         total_cfs_mat[mk.PLE.value] += cfs_mat.get(mk.PLE.value)
         total_cfs_mat[mk.CLE.value] += cfs_mat.get(mk.CLE.value)
