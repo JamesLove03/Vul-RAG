@@ -303,7 +303,6 @@ def calculate_metrics(**confusion_matrix) -> dict:
     VBS = confusion_matrix.get(mk.VBS.value)
     SBS = confusion_matrix.get(mk.SBS.value)
     
-
     if TN is None or TP is None or FN is None or FP is None:
         logging.error("The confusion matrix must contain TN, TP, FN, and FP.")
         raise ValueError("The confusion matrix must contain TN, TP, FN, and FP.")
@@ -316,7 +315,11 @@ def calculate_metrics(**confusion_matrix) -> dict:
 
     correct_no_lib_entries = (TP+TN) - CLE - NDC
     num_entries = FN + FP+ TN+ TP
-    misinformed_acc = correct_no_lib_entries /  (num_entries - WLE - CLE - ND)
+    if (num_entries - WLE - CLE - ND) == 0:
+        misinformed_acc = 0
+    else:
+        misinformed_acc = correct_no_lib_entries /  (num_entries - WLE - CLE - ND)
+    
     informed_acc = CLE / (CLE + WLE)
 
     informed_rate = (CLE + WLE) / (num_entries - ND)
@@ -361,15 +364,20 @@ def calculate_metrics(**confusion_matrix) -> dict:
         TSC = confusion_matrix.get(mk.TSC.value)
         TVC = confusion_matrix.get(mk.TVC.value)
 
-        result_map[mk.ATSC.value] = TSC / num_entries
-        result_map[mk.ATVC.value] = TVC / num_entries
+        result_map[mk.ATSC.value] = round((TSC / num_entries), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+        result_map[mk.ATVC.value] = round((TVC / num_entries), cfg.METRICS_DECIMAL_PLACES_RESERVED)
 
         for i in range(1, 11):
             skey = mk.SCS.value.format(num = i)
             vkey = mk.VCS.value.format(num = i)
             if skey in confusion_matrix:
-                result_map[mk.ASCS.value.format(num=i)] = confusion_matrix.get(skey) / confusion_matrix.get(mk.EN.value.format(num=i))
-                result_map[mk.AVCS.value.format(num=i)] = confusion_matrix.get(vkey) / confusion_matrix.get(mk.EN.value.format(num=i))
+                if confusion_matrix.get(mk.EN.value.format(num=i)) == 0:
+                    result_map[mk.ASCS.value.format(num=i)] = 0
+                    result_map[mk.AVCS.value.format(num=i)] = 0
+                else:
+
+                    result_map[mk.ASCS.value.format(num=i)] = round((confusion_matrix.get(skey) / confusion_matrix.get(mk.EN.value.format(num=i))), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+                    result_map[mk.AVCS.value.format(num=i)] = round((confusion_matrix.get(vkey) / confusion_matrix.get(mk.EN.value.format(num=i))), cfg.METRICS_DECIMAL_PLACES_RESERVED)
             else:
                 break
 
@@ -420,7 +428,9 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True, max
     elif os.path.exists(result_file_or_dir) and os.path.isfile(result_file_or_dir):
         target_result_file_list.append(result_file_or_dir)
     else:
+        print(result_file_or_dir)
         raise ValueError("The result file or directory does not exist.")
+    
     
     total_cfs_mat = {
         mk.TN.value: 0,
@@ -505,13 +515,13 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True, max
                         final_item = vul['detect_result'][-1]
                         cfs_mat[mk.TVC.value] += final_item["vul_confidence"]
                         cfs_mat[mk.TSC.value] += final_item["sol_confidence"]
-                        cfs_mat[mk.VCS.value.format(code_len)] += final_item["vul_confidence"]
-                        cfs_mat[mk.SCS.value.format(code_len)] += final_item["sol_confidence"]
+                        cfs_mat[mk.VCS.value.format(num=code_len)] += final_item["vul_confidence"]
+                        cfs_mat[mk.SCS.value.format(num=code_len)] += final_item["sol_confidence"]
 
                     for i, item in enumerate(vul["detect_result"]):
-                        cfs_mat[mk.RT.value] += item["runtime"]
-                        cfs_mat[mk.IT.value] += item[mk.IT.value]
-                        cfs_mat[mk.OT.value] += item[mk.OT.value]
+                        cfs_mat[mk.RT.value] += round(item["runtime"], cfg.METRICS_DECIMAL_PLACES_RESERVED)
+                        cfs_mat[mk.IT.value] += item["input_tokens"]
+                        cfs_mat[mk.OT.value] += item["output_tokens"]
                         
                         
                 if vul['final_result'] == -1:
@@ -561,13 +571,13 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True, max
                         final_item = non_vul['detect_result'][-1]
                         cfs_mat[mk.TVC.value] += final_item["vul_confidence"]
                         cfs_mat[mk.TSC.value] += final_item["sol_confidence"]
-                        cfs_mat[mk.VCS.value.format(code_len)] += final_item["vul_confidence"]
-                        cfs_mat[mk.SCS.value.format(code_len)] += final_item["sol_confidence"]
+                        cfs_mat[mk.VCS.value.format(num=code_len)] += final_item["vul_confidence"]
+                        cfs_mat[mk.SCS.value.format(num=code_len)] += final_item["sol_confidence"]
 
                     for i, item in enumerate(non_vul["detect_result"]):
-                        cfs_mat[mk.RT.value] += item["runtime"]
-                        cfs_mat[mk.IT.value] += item[mk.IT.value]
-                        cfs_mat[mk.OT.value] += item[mk.OT.value]
+                        cfs_mat[mk.RT.value] += round(item["runtime"], cfg.METRICS_DECIMAL_PLACES_RESERVED)
+                        cfs_mat[mk.IT.value] += item["input_tokens"]
+                        cfs_mat[mk.OT.value] += item["output_tokens"]
                                              
                         
                 if non_vul["lib_present"] == 1 and non_vul["lib_decision"] == 0:
@@ -596,6 +606,7 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True, max
             })
             cfs_mat[mk.VBS.value] = vul_brier_sum
             cfs_mat[mk.SBS.value] = sol_brier_sum
+
         metrics_data = calculate_metrics(**cfs_mat, id_result_map = id_result_map)
         # logging.info(f"Result File: {result_file}")
         # logging.info(f"{mk.TP.value}: {cfs_mat.get(mk.TP.value)}")
@@ -673,8 +684,8 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True, max
         total_metrics_data[mk.VPC.value] = total_valid_pair_cnt
         total_metrics_data[mk.APC.value] = total_accurate_pair_cnt
         total_metrics_data[mk.PAC.value] = total_pair_accuracy
-        total_metrics_data[mk.P1R.value] = total_pair_1_cnt / total_valid_pair_cnt if total_valid_pair_cnt > 0 else -1
-        total_metrics_data[mk.P0R.value] = total_pair_0_cnt / total_valid_pair_cnt if total_valid_pair_cnt > 0 else -1
+        total_metrics_data[mk.P1R.value] = round((total_pair_1_cnt / total_valid_pair_cnt), cfg.METRICS_DECIMAL_PLACES_RESERVED) if total_valid_pair_cnt > 0 else -1
+        total_metrics_data[mk.P0R.value] = round((total_pair_0_cnt / total_valid_pair_cnt), cfg.METRICS_DECIMAL_PLACES_RESERVED) if total_valid_pair_cnt > 0 else -1
         logging.info(f"Total Metrics:")
         logging.info(f"{mk.TP.value}: {total_cfs_mat.get(mk.TP.value)}")
         logging.info(f"{mk.TN.value}: {total_cfs_mat.get(mk.TN.value)}")
@@ -702,7 +713,7 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True, max
             second_level_dir_name = os.path.basename(os.path.dirname(result_file_or_dir))
             total_result_file_name = os.path.join(
                 result_file_or_dir,
-                f"{second_level_dir_name}_{first_level_dir_name}_all_CWE_metrics.json"
+                f"All_CWE_metrics.json"
             )
             DataUtils.save_json(total_result_file_name, total_metrics_data)
 

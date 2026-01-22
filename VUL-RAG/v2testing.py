@@ -545,47 +545,47 @@ def decision(benchmark, subdir, model, resume, prompt, description):
     return 0
 
 def cut_down(output_dir):
-    num_list = [5, 3, 1]
-
-    calculate_VD_metrics(output_dir, max_items=10, V2=True)
+    num_list = [10, 5, 3, 1]
 
     for item in os.listdir(output_dir):
         filepath = os.path.join(output_dir, item)
         with open(filepath, "r", encoding='utf-8') as f:
             data = json.load(f)
 
-        original_results = data["detect_result"]
-
         parent_dir = Path(output_dir).parent
+        categories = ["vul_data", "non_vul_data"]
+        new_data = copy.deepcopy(data)
 
         for num in num_list:
-            new_data = copy.deepcopy(data)
 
-            new_data["detect_result"] = original_results[:num]
+            for entry in new_data.get("vul_data") + new_data.get("non_vul_data"):
 
-            cve_list = [
-                entry["vul_knowledge"]["cve_id"]
-                for entry in new_data["detect_result"]
-            ]
-            new_data["lib_present"] = 1 if new_data["cve_id"] in cve_list else 0
+                entry["detect_result"] = entry["detect_result"][:num]
 
-            last_id = new_data["detect_result"][-1]["vul_knowledge"]["cve_id"]
-            
-            last_vul_output = new_data["detect_result"][-1]["vul_output"]
-            last_sol_output = new_data["detect_result"][-1]["sol_output"]
+                cve_list = [
+                    itera["vul_knowledge"]["cve_id"]
+                    for itera in entry.get("detect_result")
+                ]
+                
+                entry["lib_present"] = 1 if entry["cve_id"] in cve_list else 0
 
-            no_decision = False
-            if constant.LLMResponseKeywords.NEG_ANS.value in last_vul_output and constant.LLMResponseKeywords.NEG_ANS.value in last_sol_output:
-                no_decision = True
+                last_id = entry["detect_result"][-1]["vul_knowledge"]["cve_id"]
+                
+                last_vul_output = entry["detect_result"][-1]["vul_output"]
+                last_sol_output = entry["detect_result"][-1]["sol_output"]
 
-            if last_id == new_data["cve_id"] and no_decision is False:
-                new_data["lib_decision"] = 1  
-            else:
-                new_data["lib_decision"] = 0
+                no_decision = False
+                if constant.LLMResponseKeywords.NEG_ANS.value in last_vul_output and constant.LLMResponseKeywords.NEG_ANS.value in last_sol_output:
+                    no_decision = True
 
-            new_output_dir = parent_dir / constant.DETECTION_RESULTS_DIR.format(k=num)
-            new_output_dir.mkdir(parents=True, exist_ok=True)
-            new_path = new_output_dir / item
+                if last_id == entry["cve_id"] and no_decision is False:
+                    entry["lib_decision"] = 1  
+                else:
+                    entry["lib_decision"] = 0
+
+                new_output_dir = parent_dir / constant.DETECTION_RESULTS_DIR.format(k=num)
+                new_output_dir.mkdir(parents=True, exist_ok=True)
+                new_path = new_output_dir / item
 
             with open(new_path, "w", encoding='utf-8') as fw:
                 json.dump(new_data, fw, indent=4, ensure_ascii=False)
@@ -600,7 +600,8 @@ def extract_confidence(text: str):
     Returns a float between 0 and 1. Defaults to None if not found.
     """
     # Look for 'confidence 85%' or 'confidence: 0.85' patterns
-    match = re.search(r'CONFIDENCE[:\s]*([\d.]+)', text)
+    match = re.search(r'\*{0,2}CONFIDENCE\*{0,2}\s*[:\-]?\s*([\d.]+%?)', text, re.IGNORECASE)
+
     if match:
         val_str = match.group(1).rstrip('%')
         val = float(val_str)        # Convert percent to 0-1 if needed
@@ -642,8 +643,8 @@ def set_brier(items, truth): #this function adds 4 brier scores (Vul Acc brier, 
         else:
             sol_brier = (sol_conf - 1) ** 2
     
-    items["vul_brier"] = vul_brier
-    items["sol_brier"] = sol_brier
+    items["vul_brier"] = round(vul_brier, cfg.METRICS_DECIMAL_PLACES_RESERVED)
+    items["sol_brier"] = round(sol_brier, cfg.METRICS_DECIMAL_PLACES_RESERVED)
 
     return items
 
@@ -682,7 +683,7 @@ def run_decision(vul_knowledge, code_snippet, query_cve, model_instance, purpose
             pdb.set_trace()
 
         result = {
-            "vul_knowledge": vul_knowledge,
+            "vul_knowledge": knowledge,
             "vul_detect_prompt": vul_detect_prompt,
             "vul_output": vul_output,
             "sol_detect_prompt": sol_detect_prompt,
@@ -694,12 +695,12 @@ def run_decision(vul_knowledge, code_snippet, query_cve, model_instance, purpose
             "sol_confidence": sol_confidence,
         }
         detect_result.append(result)
-        
-        if(query_cve == result["vul_knowledge"]["cve_id"]):
+
+        if(query_cve == knowledge["cve_id"]):
             lib = 1          
         if (constant.LLMResponseKeywords.POS_ANS.value in vul_output and 
             constant.LLMResponseKeywords.NEG_ANS.value in sol_output):
-            if(query_cve == result["vul_knowledge"]["cve_id"]):
+            if(query_cve == knowledge["cve_id"]):
                 dec = 1            
             return {
                 "id": id,
@@ -718,7 +719,7 @@ def run_decision(vul_knowledge, code_snippet, query_cve, model_instance, purpose
             }
         
         elif constant.LLMResponseKeywords.POS_ANS.value in sol_output:
-            if(query_cve == result["vul_knowledge"]["cve_id"]):
+            if(query_cve == knowledge["cve_id"]):
                 dec = 1
             return {
                 "id": id,
@@ -776,6 +777,8 @@ if __name__ == '__main__':
 
     elif args.action == 'decision':
         decision(args.benchmark, args.input_dir, args.model, args.resume, args.prompt, args.desc)
-
+    elif args.action == 'test':
+        output_dir = 'C:/Coding/Work/Vul-RAG/Vul-RAG/partial/PairVul/6_decision_results/gpt-3.5-turbo_prompt=0_test_run/10_maxentries_results'
+        cut_down(output_dir)
     else:
         raise Exception("There is an incorrect action verb here")

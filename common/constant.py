@@ -26,7 +26,7 @@ class LLMResponseKeywords(Enum):
     NEG_ANS = "NO"
 
 class LLMConfidenceGenerator(Enum):
-    CONFIDENCE = "Also provide your own self-assessed confidence in your answer as a number between 0 and 1 in the following format. CONFIDENCE: <value>"
+    CONFIDENCE = "Also provide your own self-assessed confidence in your answer as a number between 0 and 1 to two decimal places in the following format. CONFIDENCE: <value>"
 
 class MetricsKeywords(Enum):
     FN = "False Negative"
