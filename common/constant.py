@@ -119,6 +119,7 @@ MODEL_DIR = str(Path(ROOT_DIR) / "model")
 COMMON_DIR = str(Path(ROOT_DIR) / "common")
 
 #V2 file paths and names
+V2_TRAINING_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "1_raw_data" / "train")
 V2_TESTSET_DIR =  str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "3_enhanced_data" / "test_set")
 V2_ENHANCED_DATA_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "3_enhanced_data")
 V2_ELASTIC_READY_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "2_elasticsearch_ready")

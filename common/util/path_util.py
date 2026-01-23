@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
-from common.constant import DATA_DIR, OUTPUT_DIR, LOGS_DIR, COMMON_DIR, V2_TESTSET_DIR, V2_ENHANCED_DATA_DIR
+from common.constant import DATA_DIR, OUTPUT_DIR, LOGS_DIR, COMMON_DIR, V2_TESTSET_DIR, V2_ENHANCED_DATA_DIR, V2_TRAINING_DIR, V2_ELASTIC_READY_DIR
 
 
 class PathUtil:
@@ -66,7 +66,7 @@ class PathUtil:
     
     @staticmethod
     def clean_dataV2(filename: str, ext: str, benchmark: str):
-        path = Path(V2_TESTSET_DIR.format(benchmark = benchmark))
+        path = Path(V2_TRAINING_DIR.format(benchmark = benchmark))
         path = path / f'{filename}.{ext}'
         return str(path)
 
@@ -100,7 +100,7 @@ class PathUtil:
     
     @staticmethod
     def knowledge_extraction_output_V2(filename:str, ext:str, benchmark:str):
-        path = Path(V2_ENHANCED_DATA_DIR.format(benchmark = benchmark))
+        path = Path(V2_ELASTIC_READY_DIR.format(benchmark = benchmark))
         path = path / f'{filename}.{ext}'
         return str(path)
 

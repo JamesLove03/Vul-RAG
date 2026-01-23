@@ -289,6 +289,26 @@ class VulRAGDetector:
                 retrieve_top_k = top_N
             )
         return self.format_retrieved_answer_by_code(code_before_change_answer, code_after_change_answer)
+    
+    def fill_empty_blanks(self, dicts):
+        all_keys = set()
+        combined = {}
+        
+        # Collect all keys from all dicts
+        for d in dicts:
+            all_keys.update(d.keys())
+
+        for key in tqdm(all_keys):
+            scores = []
+            for d in dicts:
+                if key not in d:
+                    # Fill missing key with 0
+                    d[key] = {"cve_id": "blank", "score": 0, "id": key}
+                scores.append(d[key]["score"])
+            
+            combined[key] = {"scores": scores}
+
+        return combined
 
     def fill_blanks(self, purpose_ds, function_ds, code_ds, dicts, queries):
         all_keys = set()
@@ -664,6 +684,7 @@ class VulRAGDetector:
         #gather dicts of answers and queries to pass to response
         dicts = [code_answer, code_embed_answer, function_answer, function_embed_answer, purpose_answer, purpose_embed_answer]
         queries = [code_snippet, code_embed, function, function_embed, purpose, purpose_embed]
+        
         response = self.fill_blanks(es_purpose, es_function, es_code, dicts, queries)
 
         #load final data with response + label 1

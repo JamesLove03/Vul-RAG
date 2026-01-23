@@ -1,0 +1,329 @@
+[
+    {
+        "cve_id": "CVE-2023-32247",
+        "code_before_change": "int smb2_sess_setup(struct ksmbd_work *work)\n{\n\tstruct ksmbd_conn *conn = work->conn;\n\tstruct smb2_sess_setup_req *req = smb2_get_msg(work->request_buf);\n\tstruct smb2_sess_setup_rsp *rsp = smb2_get_msg(work->response_buf);\n\tstruct ksmbd_session *sess;\n\tstruct negotiate_message *negblob;\n\tunsigned int negblob_len, negblob_off;\n\tint rc = 0;\n\n\tksmbd_debug(SMB, \"Received request for session setup\\n\");\n\n\trsp->StructureSize = cpu_to_le16(9);\n\trsp->SessionFlags = 0;\n\trsp->SecurityBufferOffset = cpu_to_le16(72);\n\trsp->SecurityBufferLength = 0;\n\tinc_rfc1001_len(work->response_buf, 9);\n\n\tksmbd_conn_lock(conn);\n\tif (!req->hdr.SessionId) {\n\t\tsess = ksmbd_smb2_session_create();\n\t\tif (!sess) {\n\t\t\trc = -ENOMEM;\n\t\t\tgoto out_err;\n\t\t}\n\t\trsp->hdr.SessionId = cpu_to_le64(sess->id);\n\t\trc = ksmbd_session_register(conn, sess);\n\t\tif (rc)\n\t\t\tgoto out_err;\n\t} else if (conn->dialect >= SMB30_PROT_ID &&\n\t\t   (server_conf.flags & KSMBD_GLOBAL_FLAG_SMB3_MULTICHANNEL) &&\n\t\t   req->Flags & SMB2_SESSION_REQ_FLAG_BINDING) {\n\t\tu64 sess_id = le64_to_cpu(req->hdr.SessionId);\n\n\t\tsess = ksmbd_session_lookup_slowpath(sess_id);\n\t\tif (!sess) {\n\t\t\trc = -ENOENT;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (conn->dialect != sess->dialect) {\n\t\t\trc = -EINVAL;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (!(req->hdr.Flags & SMB2_FLAGS_SIGNED)) {\n\t\t\trc = -EINVAL;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (strncmp(conn->ClientGUID, sess->ClientGUID,\n\t\t\t    SMB2_CLIENT_GUID_SIZE)) {\n\t\t\trc = -ENOENT;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (sess->state == SMB2_SESSION_IN_PROGRESS) {\n\t\t\trc = -EACCES;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (sess->state == SMB2_SESSION_EXPIRED) {\n\t\t\trc = -EFAULT;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (ksmbd_conn_need_reconnect(conn)) {\n\t\t\trc = -EFAULT;\n\t\t\tsess = NULL;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (ksmbd_session_lookup(conn, sess_id)) {\n\t\t\trc = -EACCES;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tconn->binding = true;\n\t} else if ((conn->dialect < SMB30_PROT_ID ||\n\t\t    server_conf.flags & KSMBD_GLOBAL_FLAG_SMB3_MULTICHANNEL) &&\n\t\t   (req->Flags & SMB2_SESSION_REQ_FLAG_BINDING)) {\n\t\tsess = NULL;\n\t\trc = -EACCES;\n\t\tgoto out_err;\n\t} else {\n\t\tsess = ksmbd_session_lookup(conn,\n\t\t\t\t\t    le64_to_cpu(req->hdr.SessionId));\n\t\tif (!sess) {\n\t\t\trc = -ENOENT;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (sess->state == SMB2_SESSION_EXPIRED) {\n\t\t\trc = -EFAULT;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (ksmbd_conn_need_reconnect(conn)) {\n\t\t\trc = -EFAULT;\n\t\t\tsess = NULL;\n\t\t\tgoto out_err;\n\t\t}\n\t}\n\twork->sess = sess;\n\n\tnegblob_off = le16_to_cpu(req->SecurityBufferOffset);\n\tnegblob_len = le16_to_cpu(req->SecurityBufferLength);\n\tif (negblob_off < offsetof(struct smb2_sess_setup_req, Buffer) ||\n\t    negblob_len < offsetof(struct negotiate_message, NegotiateFlags)) {\n\t\trc = -EINVAL;\n\t\tgoto out_err;\n\t}\n\n\tnegblob = (struct negotiate_message *)((char *)&req->hdr.ProtocolId +\n\t\t\tnegblob_off);\n\n\tif (decode_negotiation_token(conn, negblob, negblob_len) == 0) {\n\t\tif (conn->mechToken)\n\t\t\tnegblob = (struct negotiate_message *)conn->mechToken;\n\t}\n\n\tif (server_conf.auth_mechs & conn->auth_mechs) {\n\t\trc = generate_preauth_hash(work);\n\t\tif (rc)\n\t\t\tgoto out_err;\n\n\t\tif (conn->preferred_auth_mech &\n\t\t\t\t(KSMBD_AUTH_KRB5 | KSMBD_AUTH_MSKRB5)) {\n\t\t\trc = krb5_authenticate(work);\n\t\t\tif (rc) {\n\t\t\t\trc = -EINVAL;\n\t\t\t\tgoto out_err;\n\t\t\t}\n\n\t\t\tif (!ksmbd_conn_need_reconnect(conn)) {\n\t\t\t\tksmbd_conn_set_good(conn);\n\t\t\t\tsess->state = SMB2_SESSION_VALID;\n\t\t\t}\n\t\t\tkfree(sess->Preauth_HashValue);\n\t\t\tsess->Preauth_HashValue = NULL;\n\t\t} else if (conn->preferred_auth_mech == KSMBD_AUTH_NTLMSSP) {\n\t\t\tif (negblob->MessageType == NtLmNegotiate) {\n\t\t\t\trc = ntlm_negotiate(work, negblob, negblob_len);\n\t\t\t\tif (rc)\n\t\t\t\t\tgoto out_err;\n\t\t\t\trsp->hdr.Status =\n\t\t\t\t\tSTATUS_MORE_PROCESSING_REQUIRED;\n\t\t\t\t/*\n\t\t\t\t * Note: here total size -1 is done as an\n\t\t\t\t * adjustment for 0 size blob\n\t\t\t\t */\n\t\t\t\tinc_rfc1001_len(work->response_buf,\n\t\t\t\t\t\tle16_to_cpu(rsp->SecurityBufferLength) - 1);\n\n\t\t\t} else if (negblob->MessageType == NtLmAuthenticate) {\n\t\t\t\trc = ntlm_authenticate(work);\n\t\t\t\tif (rc)\n\t\t\t\t\tgoto out_err;\n\n\t\t\t\tif (!ksmbd_conn_need_reconnect(conn)) {\n\t\t\t\t\tksmbd_conn_set_good(conn);\n\t\t\t\t\tsess->state = SMB2_SESSION_VALID;\n\t\t\t\t}\n\t\t\t\tif (conn->binding) {\n\t\t\t\t\tstruct preauth_session *preauth_sess;\n\n\t\t\t\t\tpreauth_sess =\n\t\t\t\t\t\tksmbd_preauth_session_lookup(conn, sess->id);\n\t\t\t\t\tif (preauth_sess) {\n\t\t\t\t\t\tlist_del(&preauth_sess->preauth_entry);\n\t\t\t\t\t\tkfree(preauth_sess);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tkfree(sess->Preauth_HashValue);\n\t\t\t\tsess->Preauth_HashValue = NULL;\n\t\t\t} else {\n\t\t\t\tpr_info_ratelimited(\"Unknown NTLMSSP message type : 0x%x\\n\",\n\t\t\t\t\t\tle32_to_cpu(negblob->MessageType));\n\t\t\t\trc = -EINVAL;\n\t\t\t}\n\t\t} else {\n\t\t\t/* TODO: need one more negotiation */\n\t\t\tpr_err(\"Not support the preferred authentication\\n\");\n\t\t\trc = -EINVAL;\n\t\t}\n\t} else {\n\t\tpr_err(\"Not support authentication\\n\");\n\t\trc = -EINVAL;\n\t}\n\nout_err:\n\tif (rc == -EINVAL)\n\t\trsp->hdr.Status = STATUS_INVALID_PARAMETER;\n\telse if (rc == -ENOENT)\n\t\trsp->hdr.Status = STATUS_USER_SESSION_DELETED;\n\telse if (rc == -EACCES)\n\t\trsp->hdr.Status = STATUS_REQUEST_NOT_ACCEPTED;\n\telse if (rc == -EFAULT)\n\t\trsp->hdr.Status = STATUS_NETWORK_SESSION_EXPIRED;\n\telse if (rc == -ENOMEM)\n\t\trsp->hdr.Status = STATUS_INSUFFICIENT_RESOURCES;\n\telse if (rc)\n\t\trsp->hdr.Status = STATUS_LOGON_FAILURE;\n\n\tif (conn->use_spnego && conn->mechToken) {\n\t\tkfree(conn->mechToken);\n\t\tconn->mechToken = NULL;\n\t}\n\n\tif (rc < 0) {\n\t\t/*\n\t\t * SecurityBufferOffset should be set to zero\n\t\t * in session setup error response.\n\t\t */\n\t\trsp->SecurityBufferOffset = 0;\n\n\t\tif (sess) {\n\t\t\tbool try_delay = false;\n\n\t\t\t/*\n\t\t\t * To avoid dictionary attacks (repeated session setups rapidly sent) to\n\t\t\t * connect to server, ksmbd make a delay of a 5 seconds on session setup\n\t\t\t * failure to make it harder to send enough random connection requests\n\t\t\t * to break into a server.\n\t\t\t */\n\t\t\tif (sess->user && sess->user->flags & KSMBD_USER_FLAG_DELAY_SESSION)\n\t\t\t\ttry_delay = true;\n\n\t\t\tsess->state = SMB2_SESSION_EXPIRED;\n\t\t\tif (try_delay)\n\t\t\t\tssleep(5);\n\t\t}\n\t}\n\n\tksmbd_conn_unlock(conn);\n\treturn rc;\n}",
+        "code_after_change": "int smb2_sess_setup(struct ksmbd_work *work)\n{\n\tstruct ksmbd_conn *conn = work->conn;\n\tstruct smb2_sess_setup_req *req = smb2_get_msg(work->request_buf);\n\tstruct smb2_sess_setup_rsp *rsp = smb2_get_msg(work->response_buf);\n\tstruct ksmbd_session *sess;\n\tstruct negotiate_message *negblob;\n\tunsigned int negblob_len, negblob_off;\n\tint rc = 0;\n\n\tksmbd_debug(SMB, \"Received request for session setup\\n\");\n\n\trsp->StructureSize = cpu_to_le16(9);\n\trsp->SessionFlags = 0;\n\trsp->SecurityBufferOffset = cpu_to_le16(72);\n\trsp->SecurityBufferLength = 0;\n\tinc_rfc1001_len(work->response_buf, 9);\n\n\tksmbd_conn_lock(conn);\n\tif (!req->hdr.SessionId) {\n\t\tsess = ksmbd_smb2_session_create();\n\t\tif (!sess) {\n\t\t\trc = -ENOMEM;\n\t\t\tgoto out_err;\n\t\t}\n\t\trsp->hdr.SessionId = cpu_to_le64(sess->id);\n\t\trc = ksmbd_session_register(conn, sess);\n\t\tif (rc)\n\t\t\tgoto out_err;\n\t} else if (conn->dialect >= SMB30_PROT_ID &&\n\t\t   (server_conf.flags & KSMBD_GLOBAL_FLAG_SMB3_MULTICHANNEL) &&\n\t\t   req->Flags & SMB2_SESSION_REQ_FLAG_BINDING) {\n\t\tu64 sess_id = le64_to_cpu(req->hdr.SessionId);\n\n\t\tsess = ksmbd_session_lookup_slowpath(sess_id);\n\t\tif (!sess) {\n\t\t\trc = -ENOENT;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (conn->dialect != sess->dialect) {\n\t\t\trc = -EINVAL;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (!(req->hdr.Flags & SMB2_FLAGS_SIGNED)) {\n\t\t\trc = -EINVAL;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (strncmp(conn->ClientGUID, sess->ClientGUID,\n\t\t\t    SMB2_CLIENT_GUID_SIZE)) {\n\t\t\trc = -ENOENT;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (sess->state == SMB2_SESSION_IN_PROGRESS) {\n\t\t\trc = -EACCES;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (sess->state == SMB2_SESSION_EXPIRED) {\n\t\t\trc = -EFAULT;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (ksmbd_conn_need_reconnect(conn)) {\n\t\t\trc = -EFAULT;\n\t\t\tsess = NULL;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (ksmbd_session_lookup(conn, sess_id)) {\n\t\t\trc = -EACCES;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tconn->binding = true;\n\t} else if ((conn->dialect < SMB30_PROT_ID ||\n\t\t    server_conf.flags & KSMBD_GLOBAL_FLAG_SMB3_MULTICHANNEL) &&\n\t\t   (req->Flags & SMB2_SESSION_REQ_FLAG_BINDING)) {\n\t\tsess = NULL;\n\t\trc = -EACCES;\n\t\tgoto out_err;\n\t} else {\n\t\tsess = ksmbd_session_lookup(conn,\n\t\t\t\t\t    le64_to_cpu(req->hdr.SessionId));\n\t\tif (!sess) {\n\t\t\trc = -ENOENT;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (sess->state == SMB2_SESSION_EXPIRED) {\n\t\t\trc = -EFAULT;\n\t\t\tgoto out_err;\n\t\t}\n\n\t\tif (ksmbd_conn_need_reconnect(conn)) {\n\t\t\trc = -EFAULT;\n\t\t\tsess = NULL;\n\t\t\tgoto out_err;\n\t\t}\n\t}\n\twork->sess = sess;\n\n\tnegblob_off = le16_to_cpu(req->SecurityBufferOffset);\n\tnegblob_len = le16_to_cpu(req->SecurityBufferLength);\n\tif (negblob_off < offsetof(struct smb2_sess_setup_req, Buffer) ||\n\t    negblob_len < offsetof(struct negotiate_message, NegotiateFlags)) {\n\t\trc = -EINVAL;\n\t\tgoto out_err;\n\t}\n\n\tnegblob = (struct negotiate_message *)((char *)&req->hdr.ProtocolId +\n\t\t\tnegblob_off);\n\n\tif (decode_negotiation_token(conn, negblob, negblob_len) == 0) {\n\t\tif (conn->mechToken)\n\t\t\tnegblob = (struct negotiate_message *)conn->mechToken;\n\t}\n\n\tif (server_conf.auth_mechs & conn->auth_mechs) {\n\t\trc = generate_preauth_hash(work);\n\t\tif (rc)\n\t\t\tgoto out_err;\n\n\t\tif (conn->preferred_auth_mech &\n\t\t\t\t(KSMBD_AUTH_KRB5 | KSMBD_AUTH_MSKRB5)) {\n\t\t\trc = krb5_authenticate(work);\n\t\t\tif (rc) {\n\t\t\t\trc = -EINVAL;\n\t\t\t\tgoto out_err;\n\t\t\t}\n\n\t\t\tif (!ksmbd_conn_need_reconnect(conn)) {\n\t\t\t\tksmbd_conn_set_good(conn);\n\t\t\t\tsess->state = SMB2_SESSION_VALID;\n\t\t\t}\n\t\t\tkfree(sess->Preauth_HashValue);\n\t\t\tsess->Preauth_HashValue = NULL;\n\t\t} else if (conn->preferred_auth_mech == KSMBD_AUTH_NTLMSSP) {\n\t\t\tif (negblob->MessageType == NtLmNegotiate) {\n\t\t\t\trc = ntlm_negotiate(work, negblob, negblob_len);\n\t\t\t\tif (rc)\n\t\t\t\t\tgoto out_err;\n\t\t\t\trsp->hdr.Status =\n\t\t\t\t\tSTATUS_MORE_PROCESSING_REQUIRED;\n\t\t\t\t/*\n\t\t\t\t * Note: here total size -1 is done as an\n\t\t\t\t * adjustment for 0 size blob\n\t\t\t\t */\n\t\t\t\tinc_rfc1001_len(work->response_buf,\n\t\t\t\t\t\tle16_to_cpu(rsp->SecurityBufferLength) - 1);\n\n\t\t\t} else if (negblob->MessageType == NtLmAuthenticate) {\n\t\t\t\trc = ntlm_authenticate(work);\n\t\t\t\tif (rc)\n\t\t\t\t\tgoto out_err;\n\n\t\t\t\tif (!ksmbd_conn_need_reconnect(conn)) {\n\t\t\t\t\tksmbd_conn_set_good(conn);\n\t\t\t\t\tsess->state = SMB2_SESSION_VALID;\n\t\t\t\t}\n\t\t\t\tif (conn->binding) {\n\t\t\t\t\tstruct preauth_session *preauth_sess;\n\n\t\t\t\t\tpreauth_sess =\n\t\t\t\t\t\tksmbd_preauth_session_lookup(conn, sess->id);\n\t\t\t\t\tif (preauth_sess) {\n\t\t\t\t\t\tlist_del(&preauth_sess->preauth_entry);\n\t\t\t\t\t\tkfree(preauth_sess);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tkfree(sess->Preauth_HashValue);\n\t\t\t\tsess->Preauth_HashValue = NULL;\n\t\t\t} else {\n\t\t\t\tpr_info_ratelimited(\"Unknown NTLMSSP message type : 0x%x\\n\",\n\t\t\t\t\t\tle32_to_cpu(negblob->MessageType));\n\t\t\t\trc = -EINVAL;\n\t\t\t}\n\t\t} else {\n\t\t\t/* TODO: need one more negotiation */\n\t\t\tpr_err(\"Not support the preferred authentication\\n\");\n\t\t\trc = -EINVAL;\n\t\t}\n\t} else {\n\t\tpr_err(\"Not support authentication\\n\");\n\t\trc = -EINVAL;\n\t}\n\nout_err:\n\tif (rc == -EINVAL)\n\t\trsp->hdr.Status = STATUS_INVALID_PARAMETER;\n\telse if (rc == -ENOENT)\n\t\trsp->hdr.Status = STATUS_USER_SESSION_DELETED;\n\telse if (rc == -EACCES)\n\t\trsp->hdr.Status = STATUS_REQUEST_NOT_ACCEPTED;\n\telse if (rc == -EFAULT)\n\t\trsp->hdr.Status = STATUS_NETWORK_SESSION_EXPIRED;\n\telse if (rc == -ENOMEM)\n\t\trsp->hdr.Status = STATUS_INSUFFICIENT_RESOURCES;\n\telse if (rc)\n\t\trsp->hdr.Status = STATUS_LOGON_FAILURE;\n\n\tif (conn->use_spnego && conn->mechToken) {\n\t\tkfree(conn->mechToken);\n\t\tconn->mechToken = NULL;\n\t}\n\n\tif (rc < 0) {\n\t\t/*\n\t\t * SecurityBufferOffset should be set to zero\n\t\t * in session setup error response.\n\t\t */\n\t\trsp->SecurityBufferOffset = 0;\n\n\t\tif (sess) {\n\t\t\tbool try_delay = false;\n\n\t\t\t/*\n\t\t\t * To avoid dictionary attacks (repeated session setups rapidly sent) to\n\t\t\t * connect to server, ksmbd make a delay of a 5 seconds on session setup\n\t\t\t * failure to make it harder to send enough random connection requests\n\t\t\t * to break into a server.\n\t\t\t */\n\t\t\tif (sess->user && sess->user->flags & KSMBD_USER_FLAG_DELAY_SESSION)\n\t\t\t\ttry_delay = true;\n\n\t\t\tsess->last_active = jiffies;\n\t\t\tsess->state = SMB2_SESSION_EXPIRED;\n\t\t\tif (try_delay)\n\t\t\t\tssleep(5);\n\t\t}\n\t}\n\n\tksmbd_conn_unlock(conn);\n\treturn rc;\n}",
+        "patch": "--- code before\n+++ code after\n@@ -226,6 +226,7 @@\n \t\t\tif (sess->user && sess->user->flags & KSMBD_USER_FLAG_DELAY_SESSION)\n \t\t\t\ttry_delay = true;\n \n+\t\t\tsess->last_active = jiffies;\n \t\t\tsess->state = SMB2_SESSION_EXPIRED;\n \t\t\tif (try_delay)\n \t\t\t\tssleep(5);",
+        "function_modified_lines": {
+            "added": [
+                "\t\t\tsess->last_active = jiffies;"
+            ],
+            "deleted": []
+        },
+        "cwe": [
+            "CWE-401"
+        ],
+        "cve_description": "A flaw was found in the Linux kernel's ksmbd, a high-performance in-kernel SMB server. The specific flaw exists within the handling of SMB2_SESSION_SETUP commands. The issue results from the lack of control of resource consumption. An attacker can leverage this vulnerability to create a denial-of-service condition on the system.",
+        "id": 4015
+    },
+    {
+        "cve_id": "CVE-2022-0854",
+        "code_before_change": "phys_addr_t swiotlb_tbl_map_single(struct device *dev, phys_addr_t orig_addr,\n\t\tsize_t mapping_size, size_t alloc_size,\n\t\tunsigned int alloc_align_mask, enum dma_data_direction dir,\n\t\tunsigned long attrs)\n{\n\tstruct io_tlb_mem *mem = dev->dma_io_tlb_mem;\n\tunsigned int offset = swiotlb_align_offset(dev, orig_addr);\n\tunsigned int i;\n\tint index;\n\tphys_addr_t tlb_addr;\n\n\tif (!mem)\n\t\tpanic(\"Can not allocate SWIOTLB buffer earlier and can't now provide you with the DMA bounce buffer\");\n\n\tif (cc_platform_has(CC_ATTR_MEM_ENCRYPT))\n\t\tpr_warn_once(\"Memory encryption is active and system is using DMA bounce buffers\\n\");\n\n\tif (mapping_size > alloc_size) {\n\t\tdev_warn_once(dev, \"Invalid sizes (mapping: %zd bytes, alloc: %zd bytes)\",\n\t\t\t      mapping_size, alloc_size);\n\t\treturn (phys_addr_t)DMA_MAPPING_ERROR;\n\t}\n\n\tindex = swiotlb_find_slots(dev, orig_addr,\n\t\t\t\t   alloc_size + offset, alloc_align_mask);\n\tif (index == -1) {\n\t\tif (!(attrs & DMA_ATTR_NO_WARN))\n\t\t\tdev_warn_ratelimited(dev,\n\t\"swiotlb buffer is full (sz: %zd bytes), total %lu (slots), used %lu (slots)\\n\",\n\t\t\t\t alloc_size, mem->nslabs, mem->used);\n\t\treturn (phys_addr_t)DMA_MAPPING_ERROR;\n\t}\n\n\t/*\n\t * Save away the mapping from the original address to the DMA address.\n\t * This is needed when we sync the memory.  Then we sync the buffer if\n\t * needed.\n\t */\n\tfor (i = 0; i < nr_slots(alloc_size + offset); i++)\n\t\tmem->slots[index + i].orig_addr = slot_addr(orig_addr, i);\n\ttlb_addr = slot_addr(mem->start, index) + offset;\n\tif (!(attrs & DMA_ATTR_SKIP_CPU_SYNC) &&\n\t    (!(attrs & DMA_ATTR_OVERWRITE) || dir == DMA_TO_DEVICE ||\n\t    dir == DMA_BIDIRECTIONAL))\n\t\tswiotlb_bounce(dev, tlb_addr, mapping_size, DMA_TO_DEVICE);\n\treturn tlb_addr;\n}",
+        "code_after_change": "phys_addr_t swiotlb_tbl_map_single(struct device *dev, phys_addr_t orig_addr,\n\t\tsize_t mapping_size, size_t alloc_size,\n\t\tunsigned int alloc_align_mask, enum dma_data_direction dir,\n\t\tunsigned long attrs)\n{\n\tstruct io_tlb_mem *mem = dev->dma_io_tlb_mem;\n\tunsigned int offset = swiotlb_align_offset(dev, orig_addr);\n\tunsigned int i;\n\tint index;\n\tphys_addr_t tlb_addr;\n\n\tif (!mem)\n\t\tpanic(\"Can not allocate SWIOTLB buffer earlier and can't now provide you with the DMA bounce buffer\");\n\n\tif (cc_platform_has(CC_ATTR_MEM_ENCRYPT))\n\t\tpr_warn_once(\"Memory encryption is active and system is using DMA bounce buffers\\n\");\n\n\tif (mapping_size > alloc_size) {\n\t\tdev_warn_once(dev, \"Invalid sizes (mapping: %zd bytes, alloc: %zd bytes)\",\n\t\t\t      mapping_size, alloc_size);\n\t\treturn (phys_addr_t)DMA_MAPPING_ERROR;\n\t}\n\n\tindex = swiotlb_find_slots(dev, orig_addr,\n\t\t\t\t   alloc_size + offset, alloc_align_mask);\n\tif (index == -1) {\n\t\tif (!(attrs & DMA_ATTR_NO_WARN))\n\t\t\tdev_warn_ratelimited(dev,\n\t\"swiotlb buffer is full (sz: %zd bytes), total %lu (slots), used %lu (slots)\\n\",\n\t\t\t\t alloc_size, mem->nslabs, mem->used);\n\t\treturn (phys_addr_t)DMA_MAPPING_ERROR;\n\t}\n\n\t/*\n\t * Save away the mapping from the original address to the DMA address.\n\t * This is needed when we sync the memory.  Then we sync the buffer if\n\t * needed.\n\t */\n\tfor (i = 0; i < nr_slots(alloc_size + offset); i++)\n\t\tmem->slots[index + i].orig_addr = slot_addr(orig_addr, i);\n\ttlb_addr = slot_addr(mem->start, index) + offset;\n\t/*\n\t * When dir == DMA_FROM_DEVICE we could omit the copy from the orig\n\t * to the tlb buffer, if we knew for sure the device will\n\t * overwirte the entire current content. But we don't. Thus\n\t * unconditional bounce may prevent leaking swiotlb content (i.e.\n\t * kernel memory) to user-space.\n\t */\n\tswiotlb_bounce(dev, tlb_addr, mapping_size, DMA_TO_DEVICE);\n\treturn tlb_addr;\n}",
+        "patch": "--- code before\n+++ code after\n@@ -39,9 +39,13 @@\n \tfor (i = 0; i < nr_slots(alloc_size + offset); i++)\n \t\tmem->slots[index + i].orig_addr = slot_addr(orig_addr, i);\n \ttlb_addr = slot_addr(mem->start, index) + offset;\n-\tif (!(attrs & DMA_ATTR_SKIP_CPU_SYNC) &&\n-\t    (!(attrs & DMA_ATTR_OVERWRITE) || dir == DMA_TO_DEVICE ||\n-\t    dir == DMA_BIDIRECTIONAL))\n-\t\tswiotlb_bounce(dev, tlb_addr, mapping_size, DMA_TO_DEVICE);\n+\t/*\n+\t * When dir == DMA_FROM_DEVICE we could omit the copy from the orig\n+\t * to the tlb buffer, if we knew for sure the device will\n+\t * overwirte the entire current content. But we don't. Thus\n+\t * unconditional bounce may prevent leaking swiotlb content (i.e.\n+\t * kernel memory) to user-space.\n+\t */\n+\tswiotlb_bounce(dev, tlb_addr, mapping_size, DMA_TO_DEVICE);\n \treturn tlb_addr;\n }",
+        "function_modified_lines": {
+            "added": [
+                "\t/*",
+                "\t * When dir == DMA_FROM_DEVICE we could omit the copy from the orig",
+                "\t * to the tlb buffer, if we knew for sure the device will",
+                "\t * overwirte the entire current content. But we don't. Thus",
+                "\t * unconditional bounce may prevent leaking swiotlb content (i.e.",
+                "\t * kernel memory) to user-space.",
+                "\t */",
+                "\tswiotlb_bounce(dev, tlb_addr, mapping_size, DMA_TO_DEVICE);"
+            ],
+            "deleted": [
+                "\tif (!(attrs & DMA_ATTR_SKIP_CPU_SYNC) &&",
+                "\t    (!(attrs & DMA_ATTR_OVERWRITE) || dir == DMA_TO_DEVICE ||",
+                "\t    dir == DMA_BIDIRECTIONAL))",
+                "\t\tswiotlb_bounce(dev, tlb_addr, mapping_size, DMA_TO_DEVICE);"
+            ]
+        },
+        "cwe": [
+            "CWE-401"
+        ],
+        "cve_description": "A memory leak flaw was found in the Linux kernel\u2019s DMA subsystem, in the way a user calls DMA_FROM_DEVICE. This flaw allows a local user to read random memory from the kernel space.",
+        "id": 3226
+    },
+    {
+        "cve_id": "CVE-2023-0615",
+        "code_before_change": "void vivid_update_format_cap(struct vivid_dev *dev, bool keep_controls)\n{\n\tstruct v4l2_bt_timings *bt = &dev->dv_timings_cap[dev->input].bt;\n\tu32 dims[V4L2_CTRL_MAX_DIMS] = {};\n\tunsigned size;\n\tu64 pixelclock;\n\n\tswitch (dev->input_type[dev->input]) {\n\tcase WEBCAM:\n\tdefault:\n\t\tdev->src_rect.width = webcam_sizes[dev->webcam_size_idx].width;\n\t\tdev->src_rect.height = webcam_sizes[dev->webcam_size_idx].height;\n\t\tdev->timeperframe_vid_cap = webcam_intervals[dev->webcam_ival_idx];\n\t\tdev->field_cap = V4L2_FIELD_NONE;\n\t\ttpg_s_rgb_range(&dev->tpg, V4L2_DV_RGB_RANGE_AUTO);\n\t\tbreak;\n\tcase TV:\n\tcase SVID:\n\t\tdev->field_cap = dev->tv_field_cap;\n\t\tdev->src_rect.width = 720;\n\t\tif (dev->std_cap[dev->input] & V4L2_STD_525_60) {\n\t\t\tdev->src_rect.height = 480;\n\t\t\tdev->timeperframe_vid_cap = (struct v4l2_fract) { 1001, 30000 };\n\t\t\tdev->service_set_cap = V4L2_SLICED_CAPTION_525;\n\t\t} else {\n\t\t\tdev->src_rect.height = 576;\n\t\t\tdev->timeperframe_vid_cap = (struct v4l2_fract) { 1000, 25000 };\n\t\t\tdev->service_set_cap = V4L2_SLICED_WSS_625 | V4L2_SLICED_TELETEXT_B;\n\t\t}\n\t\ttpg_s_rgb_range(&dev->tpg, V4L2_DV_RGB_RANGE_AUTO);\n\t\tbreak;\n\tcase HDMI:\n\t\tdev->src_rect.width = bt->width;\n\t\tdev->src_rect.height = bt->height;\n\t\tsize = V4L2_DV_BT_FRAME_WIDTH(bt) * V4L2_DV_BT_FRAME_HEIGHT(bt);\n\t\tif (dev->reduced_fps && can_reduce_fps(bt)) {\n\t\t\tpixelclock = div_u64(bt->pixelclock * 1000, 1001);\n\t\t\tbt->flags |= V4L2_DV_FL_REDUCED_FPS;\n\t\t} else {\n\t\t\tpixelclock = bt->pixelclock;\n\t\t\tbt->flags &= ~V4L2_DV_FL_REDUCED_FPS;\n\t\t}\n\t\tdev->timeperframe_vid_cap = (struct v4l2_fract) {\n\t\t\tsize / 100, (u32)pixelclock / 100\n\t\t};\n\t\tif (bt->interlaced)\n\t\t\tdev->field_cap = V4L2_FIELD_ALTERNATE;\n\t\telse\n\t\t\tdev->field_cap = V4L2_FIELD_NONE;\n\n\t\t/*\n\t\t * We can be called from within s_ctrl, in that case we can't\n\t\t * set/get controls. Luckily we don't need to in that case.\n\t\t */\n\t\tif (keep_controls || !dev->colorspace)\n\t\t\tbreak;\n\t\tif (bt->flags & V4L2_DV_FL_IS_CE_VIDEO) {\n\t\t\tif (bt->width == 720 && bt->height <= 576)\n\t\t\t\tv4l2_ctrl_s_ctrl(dev->colorspace, VIVID_CS_170M);\n\t\t\telse\n\t\t\t\tv4l2_ctrl_s_ctrl(dev->colorspace, VIVID_CS_709);\n\t\t\tv4l2_ctrl_s_ctrl(dev->real_rgb_range_cap, 1);\n\t\t} else {\n\t\t\tv4l2_ctrl_s_ctrl(dev->colorspace, VIVID_CS_SRGB);\n\t\t\tv4l2_ctrl_s_ctrl(dev->real_rgb_range_cap, 0);\n\t\t}\n\t\ttpg_s_rgb_range(&dev->tpg, v4l2_ctrl_g_ctrl(dev->rgb_range_cap));\n\t\tbreak;\n\t}\n\tvfree(dev->bitmap_cap);\n\tdev->bitmap_cap = NULL;\n\tvivid_update_quality(dev);\n\ttpg_reset_source(&dev->tpg, dev->src_rect.width, dev->src_rect.height, dev->field_cap);\n\tdev->crop_cap = dev->src_rect;\n\tdev->crop_bounds_cap = dev->src_rect;\n\tdev->compose_cap = dev->crop_cap;\n\tif (V4L2_FIELD_HAS_T_OR_B(dev->field_cap))\n\t\tdev->compose_cap.height /= 2;\n\tdev->fmt_cap_rect = dev->compose_cap;\n\ttpg_s_video_aspect(&dev->tpg, vivid_get_video_aspect(dev));\n\ttpg_s_pixel_aspect(&dev->tpg, vivid_get_pixel_aspect(dev));\n\ttpg_update_mv_step(&dev->tpg);\n\tdims[0] = roundup(dev->src_rect.width, PIXEL_ARRAY_DIV);\n\tdims[1] = roundup(dev->src_rect.height, PIXEL_ARRAY_DIV);\n\tv4l2_ctrl_modify_dimensions(dev->pixel_array, dims);\n}",
+        "code_after_change": "void vivid_update_format_cap(struct vivid_dev *dev, bool keep_controls)\n{\n\tstruct v4l2_bt_timings *bt = &dev->dv_timings_cap[dev->input].bt;\n\tu32 dims[V4L2_CTRL_MAX_DIMS] = {};\n\tunsigned size;\n\tu64 pixelclock;\n\n\tswitch (dev->input_type[dev->input]) {\n\tcase WEBCAM:\n\tdefault:\n\t\tdev->src_rect.width = webcam_sizes[dev->webcam_size_idx].width;\n\t\tdev->src_rect.height = webcam_sizes[dev->webcam_size_idx].height;\n\t\tdev->timeperframe_vid_cap = webcam_intervals[dev->webcam_ival_idx];\n\t\tdev->field_cap = V4L2_FIELD_NONE;\n\t\ttpg_s_rgb_range(&dev->tpg, V4L2_DV_RGB_RANGE_AUTO);\n\t\tbreak;\n\tcase TV:\n\tcase SVID:\n\t\tdev->field_cap = dev->tv_field_cap;\n\t\tdev->src_rect.width = 720;\n\t\tif (dev->std_cap[dev->input] & V4L2_STD_525_60) {\n\t\t\tdev->src_rect.height = 480;\n\t\t\tdev->timeperframe_vid_cap = (struct v4l2_fract) { 1001, 30000 };\n\t\t\tdev->service_set_cap = V4L2_SLICED_CAPTION_525;\n\t\t} else {\n\t\t\tdev->src_rect.height = 576;\n\t\t\tdev->timeperframe_vid_cap = (struct v4l2_fract) { 1000, 25000 };\n\t\t\tdev->service_set_cap = V4L2_SLICED_WSS_625 | V4L2_SLICED_TELETEXT_B;\n\t\t}\n\t\ttpg_s_rgb_range(&dev->tpg, V4L2_DV_RGB_RANGE_AUTO);\n\t\tbreak;\n\tcase HDMI:\n\t\tdev->src_rect.width = bt->width;\n\t\tdev->src_rect.height = bt->height;\n\t\tsize = V4L2_DV_BT_FRAME_WIDTH(bt) * V4L2_DV_BT_FRAME_HEIGHT(bt);\n\t\tif (dev->reduced_fps && can_reduce_fps(bt)) {\n\t\t\tpixelclock = div_u64(bt->pixelclock * 1000, 1001);\n\t\t\tbt->flags |= V4L2_DV_FL_REDUCED_FPS;\n\t\t} else {\n\t\t\tpixelclock = bt->pixelclock;\n\t\t\tbt->flags &= ~V4L2_DV_FL_REDUCED_FPS;\n\t\t}\n\t\tdev->timeperframe_vid_cap = (struct v4l2_fract) {\n\t\t\tsize / 100, (u32)pixelclock / 100\n\t\t};\n\t\tif (bt->interlaced)\n\t\t\tdev->field_cap = V4L2_FIELD_ALTERNATE;\n\t\telse\n\t\t\tdev->field_cap = V4L2_FIELD_NONE;\n\n\t\t/*\n\t\t * We can be called from within s_ctrl, in that case we can't\n\t\t * set/get controls. Luckily we don't need to in that case.\n\t\t */\n\t\tif (keep_controls || !dev->colorspace)\n\t\t\tbreak;\n\t\tif (bt->flags & V4L2_DV_FL_IS_CE_VIDEO) {\n\t\t\tif (bt->width == 720 && bt->height <= 576)\n\t\t\t\tv4l2_ctrl_s_ctrl(dev->colorspace, VIVID_CS_170M);\n\t\t\telse\n\t\t\t\tv4l2_ctrl_s_ctrl(dev->colorspace, VIVID_CS_709);\n\t\t\tv4l2_ctrl_s_ctrl(dev->real_rgb_range_cap, 1);\n\t\t} else {\n\t\t\tv4l2_ctrl_s_ctrl(dev->colorspace, VIVID_CS_SRGB);\n\t\t\tv4l2_ctrl_s_ctrl(dev->real_rgb_range_cap, 0);\n\t\t}\n\t\ttpg_s_rgb_range(&dev->tpg, v4l2_ctrl_g_ctrl(dev->rgb_range_cap));\n\t\tbreak;\n\t}\n\tvfree(dev->bitmap_cap);\n\tdev->bitmap_cap = NULL;\n\tvivid_update_quality(dev);\n\ttpg_reset_source(&dev->tpg, dev->src_rect.width, dev->src_rect.height, dev->field_cap);\n\tdev->crop_cap = dev->src_rect;\n\tdev->crop_bounds_cap = dev->src_rect;\n\tif (dev->bitmap_cap &&\n\t    (dev->compose_cap.width != dev->crop_cap.width ||\n\t     dev->compose_cap.height != dev->crop_cap.height)) {\n\t\tvfree(dev->bitmap_cap);\n\t\tdev->bitmap_cap = NULL;\n\t}\n\tdev->compose_cap = dev->crop_cap;\n\tif (V4L2_FIELD_HAS_T_OR_B(dev->field_cap))\n\t\tdev->compose_cap.height /= 2;\n\tdev->fmt_cap_rect = dev->compose_cap;\n\ttpg_s_video_aspect(&dev->tpg, vivid_get_video_aspect(dev));\n\ttpg_s_pixel_aspect(&dev->tpg, vivid_get_pixel_aspect(dev));\n\ttpg_update_mv_step(&dev->tpg);\n\tdims[0] = roundup(dev->src_rect.width, PIXEL_ARRAY_DIV);\n\tdims[1] = roundup(dev->src_rect.height, PIXEL_ARRAY_DIV);\n\tv4l2_ctrl_modify_dimensions(dev->pixel_array, dims);\n}",
+        "patch": "--- code before\n+++ code after\n@@ -73,6 +73,12 @@\n \ttpg_reset_source(&dev->tpg, dev->src_rect.width, dev->src_rect.height, dev->field_cap);\n \tdev->crop_cap = dev->src_rect;\n \tdev->crop_bounds_cap = dev->src_rect;\n+\tif (dev->bitmap_cap &&\n+\t    (dev->compose_cap.width != dev->crop_cap.width ||\n+\t     dev->compose_cap.height != dev->crop_cap.height)) {\n+\t\tvfree(dev->bitmap_cap);\n+\t\tdev->bitmap_cap = NULL;\n+\t}\n \tdev->compose_cap = dev->crop_cap;\n \tif (V4L2_FIELD_HAS_T_OR_B(dev->field_cap))\n \t\tdev->compose_cap.height /= 2;",
+        "function_modified_lines": {
+            "added": [
+                "\tif (dev->bitmap_cap &&",
+                "\t    (dev->compose_cap.width != dev->crop_cap.width ||",
+                "\t     dev->compose_cap.height != dev->crop_cap.height)) {",
+                "\t\tvfree(dev->bitmap_cap);",
+                "\t\tdev->bitmap_cap = NULL;",
+                "\t}"
+            ],
+            "deleted": []
+        },
+        "cwe": [
+            "CWE-369",
+            "CWE-190",
+            "CWE-401"
+        ],
+        "cve_description": "A memory leak flaw and potential divide by zero and Integer overflow was found in the Linux kernel V4L2 and vivid test code functionality. This issue occurs when a user triggers ioctls, such as VIDIOC_S_DV_TIMINGS ioctl. This could allow a local user to crash the system if vivid test code enabled.",
+        "id": 3837
+    },
+    {
+        "cve_id": "CVE-2019-19073",
+        "code_before_change": "int htc_connect_service(struct htc_target *target,\n\t\t     struct htc_service_connreq *service_connreq,\n\t\t     enum htc_endpoint_id *conn_rsp_epid)\n{\n\tstruct sk_buff *skb;\n\tstruct htc_endpoint *endpoint;\n\tstruct htc_conn_svc_msg *conn_msg;\n\tint ret;\n\tunsigned long time_left;\n\n\t/* Find an available endpoint */\n\tendpoint = get_next_avail_ep(target->endpoint);\n\tif (!endpoint) {\n\t\tdev_err(target->dev, \"Endpoint is not available for service %d\\n\",\n\t\t\tservice_connreq->service_id);\n\t\treturn -EINVAL;\n\t}\n\n\tendpoint->service_id = service_connreq->service_id;\n\tendpoint->max_txqdepth = service_connreq->max_send_qdepth;\n\tendpoint->ul_pipeid = service_to_ulpipe(service_connreq->service_id);\n\tendpoint->dl_pipeid = service_to_dlpipe(service_connreq->service_id);\n\tendpoint->ep_callbacks = service_connreq->ep_callbacks;\n\n\tskb = alloc_skb(sizeof(struct htc_conn_svc_msg) +\n\t\t\t    sizeof(struct htc_frame_hdr), GFP_ATOMIC);\n\tif (!skb) {\n\t\tdev_err(target->dev, \"Failed to allocate buf to send\"\n\t\t\t\"service connect req\\n\");\n\t\treturn -ENOMEM;\n\t}\n\n\tskb_reserve(skb, sizeof(struct htc_frame_hdr));\n\n\tconn_msg = skb_put(skb, sizeof(struct htc_conn_svc_msg));\n\tconn_msg->service_id = cpu_to_be16(service_connreq->service_id);\n\tconn_msg->msg_id = cpu_to_be16(HTC_MSG_CONNECT_SERVICE_ID);\n\tconn_msg->con_flags = cpu_to_be16(service_connreq->con_flags);\n\tconn_msg->dl_pipeid = endpoint->dl_pipeid;\n\tconn_msg->ul_pipeid = endpoint->ul_pipeid;\n\n\tret = htc_issue_send(target, skb, skb->len, 0, ENDPOINT0);\n\tif (ret)\n\t\tgoto err;\n\n\ttime_left = wait_for_completion_timeout(&target->cmd_wait, HZ);\n\tif (!time_left) {\n\t\tdev_err(target->dev, \"Service connection timeout for: %d\\n\",\n\t\t\tservice_connreq->service_id);\n\t\treturn -ETIMEDOUT;\n\t}\n\n\t*conn_rsp_epid = target->conn_rsp_epid;\n\treturn 0;\nerr:\n\tkfree_skb(skb);\n\treturn ret;\n}",
+        "code_after_change": "int htc_connect_service(struct htc_target *target,\n\t\t     struct htc_service_connreq *service_connreq,\n\t\t     enum htc_endpoint_id *conn_rsp_epid)\n{\n\tstruct sk_buff *skb;\n\tstruct htc_endpoint *endpoint;\n\tstruct htc_conn_svc_msg *conn_msg;\n\tint ret;\n\tunsigned long time_left;\n\n\t/* Find an available endpoint */\n\tendpoint = get_next_avail_ep(target->endpoint);\n\tif (!endpoint) {\n\t\tdev_err(target->dev, \"Endpoint is not available for service %d\\n\",\n\t\t\tservice_connreq->service_id);\n\t\treturn -EINVAL;\n\t}\n\n\tendpoint->service_id = service_connreq->service_id;\n\tendpoint->max_txqdepth = service_connreq->max_send_qdepth;\n\tendpoint->ul_pipeid = service_to_ulpipe(service_connreq->service_id);\n\tendpoint->dl_pipeid = service_to_dlpipe(service_connreq->service_id);\n\tendpoint->ep_callbacks = service_connreq->ep_callbacks;\n\n\tskb = alloc_skb(sizeof(struct htc_conn_svc_msg) +\n\t\t\t    sizeof(struct htc_frame_hdr), GFP_ATOMIC);\n\tif (!skb) {\n\t\tdev_err(target->dev, \"Failed to allocate buf to send\"\n\t\t\t\"service connect req\\n\");\n\t\treturn -ENOMEM;\n\t}\n\n\tskb_reserve(skb, sizeof(struct htc_frame_hdr));\n\n\tconn_msg = skb_put(skb, sizeof(struct htc_conn_svc_msg));\n\tconn_msg->service_id = cpu_to_be16(service_connreq->service_id);\n\tconn_msg->msg_id = cpu_to_be16(HTC_MSG_CONNECT_SERVICE_ID);\n\tconn_msg->con_flags = cpu_to_be16(service_connreq->con_flags);\n\tconn_msg->dl_pipeid = endpoint->dl_pipeid;\n\tconn_msg->ul_pipeid = endpoint->ul_pipeid;\n\n\tret = htc_issue_send(target, skb, skb->len, 0, ENDPOINT0);\n\tif (ret)\n\t\tgoto err;\n\n\ttime_left = wait_for_completion_timeout(&target->cmd_wait, HZ);\n\tif (!time_left) {\n\t\tdev_err(target->dev, \"Service connection timeout for: %d\\n\",\n\t\t\tservice_connreq->service_id);\n\t\tkfree_skb(skb);\n\t\treturn -ETIMEDOUT;\n\t}\n\n\t*conn_rsp_epid = target->conn_rsp_epid;\n\treturn 0;\nerr:\n\tkfree_skb(skb);\n\treturn ret;\n}",
+        "patch": "--- code before\n+++ code after\n@@ -47,6 +47,7 @@\n \tif (!time_left) {\n \t\tdev_err(target->dev, \"Service connection timeout for: %d\\n\",\n \t\t\tservice_connreq->service_id);\n+\t\tkfree_skb(skb);\n \t\treturn -ETIMEDOUT;\n \t}\n ",
+        "function_modified_lines": {
+            "added": [
+                "\t\tkfree_skb(skb);"
+            ],
+            "deleted": []
+        },
+        "cwe": [
+            "CWE-401"
+        ],
+        "cve_description": "Memory leaks in drivers/net/wireless/ath/ath9k/htc_hst.c in the Linux kernel through 5.3.11 allow attackers to cause a denial of service (memory consumption) by triggering wait_for_completion_timeout() failures. This affects the htc_config_pipe_credits() function, the htc_setup_complete() function, and the htc_connect_service() function, aka CID-853acf7caf10.",
+        "id": 2154
+    },
+    {
+        "cve_id": "CVE-2022-1012",
+        "code_before_change": "u32 secure_ipv6_port_ephemeral(const __be32 *saddr, const __be32 *daddr,\n\t\t\t       __be16 dport)\n{\n\tconst struct {\n\t\tstruct in6_addr saddr;\n\t\tstruct in6_addr daddr;\n\t\t__be16 dport;\n\t} __aligned(SIPHASH_ALIGNMENT) combined = {\n\t\t.saddr = *(struct in6_addr *)saddr,\n\t\t.daddr = *(struct in6_addr *)daddr,\n\t\t.dport = dport\n\t};\n\tnet_secret_init();\n\treturn siphash(&combined, offsetofend(typeof(combined), dport),\n\t\t       &net_secret);\n}",
+        "code_after_change": "u64 secure_ipv6_port_ephemeral(const __be32 *saddr, const __be32 *daddr,\n\t\t\t       __be16 dport)\n{\n\tconst struct {\n\t\tstruct in6_addr saddr;\n\t\tstruct in6_addr daddr;\n\t\t__be16 dport;\n\t} __aligned(SIPHASH_ALIGNMENT) combined = {\n\t\t.saddr = *(struct in6_addr *)saddr,\n\t\t.daddr = *(struct in6_addr *)daddr,\n\t\t.dport = dport\n\t};\n\tnet_secret_init();\n\treturn siphash(&combined, offsetofend(typeof(combined), dport),\n\t\t       &net_secret);\n}",
+        "patch": "--- code before\n+++ code after\n@@ -1,4 +1,4 @@\n-u32 secure_ipv6_port_ephemeral(const __be32 *saddr, const __be32 *daddr,\n+u64 secure_ipv6_port_ephemeral(const __be32 *saddr, const __be32 *daddr,\n \t\t\t       __be16 dport)\n {\n \tconst struct {",
+        "function_modified_lines": {
+            "added": [
+                "u64 secure_ipv6_port_ephemeral(const __be32 *saddr, const __be32 *daddr,"
+            ],
+            "deleted": [
+                "u32 secure_ipv6_port_ephemeral(const __be32 *saddr, const __be32 *daddr,"
+            ]
+        },
+        "cwe": [
+            "CWE-401"
+        ],
+        "cve_description": "A memory leak problem was found in the TCP source port generation algorithm in net/ipv4/tcp.c due to the small table perturb size. This flaw may allow an attacker to information leak and may cause a denial of service problem.",
+        "id": 3233
+    },
+    {
+        "cve_id": "CVE-2022-1012",
+        "code_before_change": "static u32 inet_sk_port_offset(const struct sock *sk)\n{\n\tconst struct inet_sock *inet = inet_sk(sk);\n\n\treturn secure_ipv4_port_ephemeral(inet->inet_rcv_saddr,\n\t\t\t\t\t  inet->inet_daddr,\n\t\t\t\t\t  inet->inet_dport);\n}",
+        "code_after_change": "static u64 inet_sk_port_offset(const struct sock *sk)\n{\n\tconst struct inet_sock *inet = inet_sk(sk);\n\n\treturn secure_ipv4_port_ephemeral(inet->inet_rcv_saddr,\n\t\t\t\t\t  inet->inet_daddr,\n\t\t\t\t\t  inet->inet_dport);\n}",
+        "patch": "--- code before\n+++ code after\n@@ -1,4 +1,4 @@\n-static u32 inet_sk_port_offset(const struct sock *sk)\n+static u64 inet_sk_port_offset(const struct sock *sk)\n {\n \tconst struct inet_sock *inet = inet_sk(sk);\n ",
+        "function_modified_lines": {
+            "added": [
+                "static u64 inet_sk_port_offset(const struct sock *sk)"
+            ],
+            "deleted": [
+                "static u32 inet_sk_port_offset(const struct sock *sk)"
+            ]
+        },
+        "cwe": [
+            "CWE-401"
+        ],
+        "cve_description": "A memory leak problem was found in the TCP source port generation algorithm in net/ipv4/tcp.c due to the small table perturb size. This flaw may allow an attacker to information leak and may cause a denial of service problem.",
+        "id": 3234
+    },
+    {
+        "cve_id": "CVE-2022-0742",
+        "code_before_change": "int igmp6_event_report(struct sk_buff *skb)\n{\n\tstruct inet6_dev *idev = __in6_dev_get(skb->dev);\n\n\tif (!idev)\n\t\treturn -EINVAL;\n\n\tif (idev->dead) {\n\t\tkfree_skb(skb);\n\t\treturn -ENODEV;\n\t}\n\n\tspin_lock_bh(&idev->mc_report_lock);\n\tif (skb_queue_len(&idev->mc_report_queue) < MLD_MAX_SKBS) {\n\t\t__skb_queue_tail(&idev->mc_report_queue, skb);\n\t\tif (!mod_delayed_work(mld_wq, &idev->mc_report_work, 0))\n\t\t\tin6_dev_hold(idev);\n\t}\n\tspin_unlock_bh(&idev->mc_report_lock);\n\n\treturn 0;\n}",
+        "code_after_change": "void igmp6_event_report(struct sk_buff *skb)\n{\n\tstruct inet6_dev *idev = __in6_dev_get(skb->dev);\n\n\tif (!idev || idev->dead)\n\t\tgoto out;\n\n\tspin_lock_bh(&idev->mc_report_lock);\n\tif (skb_queue_len(&idev->mc_report_queue) < MLD_MAX_SKBS) {\n\t\t__skb_queue_tail(&idev->mc_report_queue, skb);\n\t\tif (!mod_delayed_work(mld_wq, &idev->mc_report_work, 0))\n\t\t\tin6_dev_hold(idev);\n\t\tskb = NULL;\n\t}\n\tspin_unlock_bh(&idev->mc_report_lock);\nout:\n\tkfree_skb(skb);\n}",
+        "patch": "--- code before\n+++ code after\n@@ -1,22 +1,18 @@\n-int igmp6_event_report(struct sk_buff *skb)\n+void igmp6_event_report(struct sk_buff *skb)\n {\n \tstruct inet6_dev *idev = __in6_dev_get(skb->dev);\n \n-\tif (!idev)\n-\t\treturn -EINVAL;\n-\n-\tif (idev->dead) {\n-\t\tkfree_skb(skb);\n-\t\treturn -ENODEV;\n-\t}\n+\tif (!idev || idev->dead)\n+\t\tgoto out;\n \n \tspin_lock_bh(&idev->mc_report_lock);\n \tif (skb_queue_len(&idev->mc_report_queue) < MLD_MAX_SKBS) {\n \t\t__skb_queue_tail(&idev->mc_report_queue, skb);\n \t\tif (!mod_delayed_work(mld_wq, &idev->mc_report_work, 0))\n \t\t\tin6_dev_hold(idev);\n+\t\tskb = NULL;\n \t}\n \tspin_unlock_bh(&idev->mc_report_lock);\n-\n-\treturn 0;\n+out:\n+\tkfree_skb(skb);\n }",
+        "function_modified_lines": {
+            "added": [
+                "void igmp6_event_report(struct sk_buff *skb)",
+                "\tif (!idev || idev->dead)",
+                "\t\tgoto out;",
+                "\t\tskb = NULL;",
+                "out:",
+                "\tkfree_skb(skb);"
+            ],
+            "deleted": [
+                "int igmp6_event_report(struct sk_buff *skb)",
+                "\tif (!idev)",
+                "\t\treturn -EINVAL;",
+                "",
+                "\tif (idev->dead) {",
+                "\t\tkfree_skb(skb);",
+                "\t\treturn -ENODEV;",
+                "\t}",
+                "",
+                "\treturn 0;"
+            ]
+        },
+        "cwe": [
+            "CWE-401"
+        ],
+        "cve_description": "Memory leak in icmp6 implementation in Linux Kernel 5.13+ allows a remote attacker to DoS a host by making it go out-of-memory via icmp6 packets of type 130 or 131. We recommend upgrading past commit 2d3916f3189172d5c69d33065c3c21119fe539fc.",
+        "id": 3219
+    },
+    {
+        "cve_id": "CVE-2019-19082",
+        "code_before_change": "struct resource_pool *dcn10_create_resource_pool(\n\t\tconst struct dc_init_data *init_data,\n\t\tstruct dc *dc)\n{\n\tstruct dcn10_resource_pool *pool =\n\t\tkzalloc(sizeof(struct dcn10_resource_pool), GFP_KERNEL);\n\n\tif (!pool)\n\t\treturn NULL;\n\n\tif (construct(init_data->num_virtual_links, dc, pool))\n\t\treturn &pool->base;\n\n\tBREAK_TO_DEBUGGER();\n\treturn NULL;\n}",
+        "code_after_change": "struct resource_pool *dcn10_create_resource_pool(\n\t\tconst struct dc_init_data *init_data,\n\t\tstruct dc *dc)\n{\n\tstruct dcn10_resource_pool *pool =\n\t\tkzalloc(sizeof(struct dcn10_resource_pool), GFP_KERNEL);\n\n\tif (!pool)\n\t\treturn NULL;\n\n\tif (construct(init_data->num_virtual_links, dc, pool))\n\t\treturn &pool->base;\n\n\tkfree(pool);\n\tBREAK_TO_DEBUGGER();\n\treturn NULL;\n}",
+        "patch": "--- code before\n+++ code after\n@@ -11,6 +11,7 @@\n \tif (construct(init_data->num_virtual_links, dc, pool))\n \t\treturn &pool->base;\n \n+\tkfree(pool);\n \tBREAK_TO_DEBUGGER();\n \treturn NULL;\n }",
+        "function_modified_lines": {
+            "added": [
+                "\tkfree(pool);"
+            ],
+            "deleted": []
+        },
+        "cwe": [
+            "CWE-401"
+        ],
+        "cve_description": "Memory leaks in *create_resource_pool() functions under drivers/gpu/drm/amd/display/dc in the Linux kernel through 5.3.11 allow attackers to cause a denial of service (memory consumption). This affects the dce120_create_resource_pool() function in drivers/gpu/drm/amd/display/dc/dce120/dce120_resource.c, the dce110_create_resource_pool() function in drivers/gpu/drm/amd/display/dc/dce110/dce110_resource.c, the dce100_create_resource_pool() function in drivers/gpu/drm/amd/display/dc/dce100/dce100_resource.c, the dcn10_create_resource_pool() function in drivers/gpu/drm/amd/display/dc/dcn10/dcn10_resource.c, and the dce112_create_resource_pool() function in drivers/gpu/drm/amd/display/dc/dce112/dce112_resource.c, aka CID-104c307147ad.",
+        "id": 2169
+    },
+    {
+        "cve_id": "CVE-2019-19083",
+        "code_before_change": "struct clock_source *dce80_clock_source_create(\n\tstruct dc_context *ctx,\n\tstruct dc_bios *bios,\n\tenum clock_source_id id,\n\tconst struct dce110_clk_src_regs *regs,\n\tbool dp_clk_src)\n{\n\tstruct dce110_clk_src *clk_src =\n\t\tkzalloc(sizeof(struct dce110_clk_src), GFP_KERNEL);\n\n\tif (!clk_src)\n\t\treturn NULL;\n\n\tif (dce110_clk_src_construct(clk_src, ctx, bios, id,\n\t\t\tregs, &cs_shift, &cs_mask)) {\n\t\tclk_src->base.dp_clk_src = dp_clk_src;\n\t\treturn &clk_src->base;\n\t}\n\n\tBREAK_TO_DEBUGGER();\n\treturn NULL;\n}",
+        "code_after_change": "struct clock_source *dce80_clock_source_create(\n\tstruct dc_context *ctx,\n\tstruct dc_bios *bios,\n\tenum clock_source_id id,\n\tconst struct dce110_clk_src_regs *regs,\n\tbool dp_clk_src)\n{\n\tstruct dce110_clk_src *clk_src =\n\t\tkzalloc(sizeof(struct dce110_clk_src), GFP_KERNEL);\n\n\tif (!clk_src)\n\t\treturn NULL;\n\n\tif (dce110_clk_src_construct(clk_src, ctx, bios, id,\n\t\t\tregs, &cs_shift, &cs_mask)) {\n\t\tclk_src->base.dp_clk_src = dp_clk_src;\n\t\treturn &clk_src->base;\n\t}\n\n\tkfree(clk_src);\n\tBREAK_TO_DEBUGGER();\n\treturn NULL;\n}",
+        "patch": "--- code before\n+++ code after\n@@ -17,6 +17,7 @@\n \t\treturn &clk_src->base;\n \t}\n \n+\tkfree(clk_src);\n \tBREAK_TO_DEBUGGER();\n \treturn NULL;\n }",
+        "function_modified_lines": {
+            "added": [
+                "\tkfree(clk_src);"
+            ],
+            "deleted": []
+        },
+        "cwe": [
+            "CWE-401"
+        ],
+        "cve_description": "Memory leaks in *clock_source_create() functions under drivers/gpu/drm/amd/display/dc in the Linux kernel before 5.3.8 allow attackers to cause a denial of service (memory consumption). This affects the dce112_clock_source_create() function in drivers/gpu/drm/amd/display/dc/dce112/dce112_resource.c, the dce100_clock_source_create() function in drivers/gpu/drm/amd/display/dc/dce100/dce100_resource.c, the dcn10_clock_source_create() function in drivers/gpu/drm/amd/display/dc/dcn10/dcn10_resource.c, the dcn20_clock_source_create() function in drivers/gpu/drm/amd/display/dc/dcn20/dcn20_resource.c, the dce120_clock_source_create() function in drivers/gpu/drm/amd/display/dc/dce120/dce120_resource.c, the dce110_clock_source_create() function in drivers/gpu/drm/amd/display/dc/dce110/dce110_resource.c, and the dce80_clock_source_create() function in drivers/gpu/drm/amd/display/dc/dce80/dce80_resource.c, aka CID-055e547478a1.",
+        "id": 2174
+    },
+    {
+        "cve_id": "CVE-2019-19083",
+        "code_before_change": "struct clock_source *dce112_clock_source_create(\n\tstruct dc_context *ctx,\n\tstruct dc_bios *bios,\n\tenum clock_source_id id,\n\tconst struct dce110_clk_src_regs *regs,\n\tbool dp_clk_src)\n{\n\tstruct dce110_clk_src *clk_src =\n\t\tkzalloc(sizeof(struct dce110_clk_src), GFP_KERNEL);\n\n\tif (!clk_src)\n\t\treturn NULL;\n\n\tif (dce112_clk_src_construct(clk_src, ctx, bios, id,\n\t\t\tregs, &cs_shift, &cs_mask)) {\n\t\tclk_src->base.dp_clk_src = dp_clk_src;\n\t\treturn &clk_src->base;\n\t}\n\n\tBREAK_TO_DEBUGGER();\n\treturn NULL;\n}",
+        "code_after_change": "struct clock_source *dce112_clock_source_create(\n\tstruct dc_context *ctx,\n\tstruct dc_bios *bios,\n\tenum clock_source_id id,\n\tconst struct dce110_clk_src_regs *regs,\n\tbool dp_clk_src)\n{\n\tstruct dce110_clk_src *clk_src =\n\t\tkzalloc(sizeof(struct dce110_clk_src), GFP_KERNEL);\n\n\tif (!clk_src)\n\t\treturn NULL;\n\n\tif (dce112_clk_src_construct(clk_src, ctx, bios, id,\n\t\t\tregs, &cs_shift, &cs_mask)) {\n\t\tclk_src->base.dp_clk_src = dp_clk_src;\n\t\treturn &clk_src->base;\n\t}\n\n\tkfree(clk_src);\n\tBREAK_TO_DEBUGGER();\n\treturn NULL;\n}",
+        "patch": "--- code before\n+++ code after\n@@ -17,6 +17,7 @@\n \t\treturn &clk_src->base;\n \t}\n \n+\tkfree(clk_src);\n \tBREAK_TO_DEBUGGER();\n \treturn NULL;\n }",
+        "function_modified_lines": {
+            "added": [
+                "\tkfree(clk_src);"
+            ],
+            "deleted": []
+        },
+        "cwe": [
+            "CWE-401"
+        ],
+        "cve_description": "Memory leaks in *clock_source_create() functions under drivers/gpu/drm/amd/display/dc in the Linux kernel before 5.3.8 allow attackers to cause a denial of service (memory consumption). This affects the dce112_clock_source_create() function in drivers/gpu/drm/amd/display/dc/dce112/dce112_resource.c, the dce100_clock_source_create() function in drivers/gpu/drm/amd/display/dc/dce100/dce100_resource.c, the dcn10_clock_source_create() function in drivers/gpu/drm/amd/display/dc/dcn10/dcn10_resource.c, the dcn20_clock_source_create() function in drivers/gpu/drm/amd/display/dc/dcn20/dcn20_resource.c, the dce120_clock_source_create() function in drivers/gpu/drm/amd/display/dc/dce120/dce120_resource.c, the dce110_clock_source_create() function in drivers/gpu/drm/amd/display/dc/dce110/dce110_resource.c, and the dce80_clock_source_create() function in drivers/gpu/drm/amd/display/dc/dce80/dce80_resource.c, aka CID-055e547478a1.",
+        "id": 2172
+    },
+    {
+        "cve_id": "CVE-2021-29649",
+        "code_before_change": "static int finish(void)\n{\n\tint magic = BPF_PRELOAD_END;\n\tstruct pid *tgid;\n\tloff_t pos = 0;\n\tssize_t n;\n\n\t/* send the last magic to UMD. It will do a normal exit. */\n\tn = kernel_write(umd_ops.info.pipe_to_umh,\n\t\t\t &magic, sizeof(magic), &pos);\n\tif (n != sizeof(magic))\n\t\treturn -EPIPE;\n\ttgid = umd_ops.info.tgid;\n\twait_event(tgid->wait_pidfd, thread_group_exited(tgid));\n\tumd_ops.info.tgid = NULL;\n\treturn 0;\n}",
+        "code_after_change": "static int finish(void)\n{\n\tint magic = BPF_PRELOAD_END;\n\tstruct pid *tgid;\n\tloff_t pos = 0;\n\tssize_t n;\n\n\t/* send the last magic to UMD. It will do a normal exit. */\n\tn = kernel_write(umd_ops.info.pipe_to_umh,\n\t\t\t &magic, sizeof(magic), &pos);\n\tif (n != sizeof(magic))\n\t\treturn -EPIPE;\n\n\ttgid = umd_ops.info.tgid;\n\tif (tgid) {\n\t\twait_event(tgid->wait_pidfd, thread_group_exited(tgid));\n\t\tumd_cleanup_helper(&umd_ops.info);\n\t}\n\treturn 0;\n}",
+        "patch": "--- code before\n+++ code after\n@@ -10,8 +10,11 @@\n \t\t\t &magic, sizeof(magic), &pos);\n \tif (n != sizeof(magic))\n \t\treturn -EPIPE;\n+\n \ttgid = umd_ops.info.tgid;\n-\twait_event(tgid->wait_pidfd, thread_group_exited(tgid));\n-\tumd_ops.info.tgid = NULL;\n+\tif (tgid) {\n+\t\twait_event(tgid->wait_pidfd, thread_group_exited(tgid));\n+\t\tumd_cleanup_helper(&umd_ops.info);\n+\t}\n \treturn 0;\n }",
+        "function_modified_lines": {
+            "added": [
+                "",
+                "\tif (tgid) {",
+                "\t\twait_event(tgid->wait_pidfd, thread_group_exited(tgid));",
+                "\t\tumd_cleanup_helper(&umd_ops.info);",
+                "\t}"
+            ],
+            "deleted": [
+                "\twait_event(tgid->wait_pidfd, thread_group_exited(tgid));",
+                "\tumd_ops.info.tgid = NULL;"
+            ]
+        },
+        "cwe": [
+            "CWE-401"
+        ],
+        "cve_description": "An issue was discovered in the Linux kernel before 5.11.11. The user mode driver (UMD) has a copy_process() memory leak, related to a lack of cleanup steps in kernel/usermode_driver.c and kernel/bpf/preload/bpf_preload_kern.c, aka CID-f60a85cad677.",
+        "id": 2952
+    },
+    {
+        "cve_id": "CVE-2023-0597",
+        "code_before_change": "void __init setup_cpu_entry_areas(void)\n{\n\tunsigned int cpu;\n\n\tsetup_cpu_entry_area_ptes();\n\n\tfor_each_possible_cpu(cpu)\n\t\tsetup_cpu_entry_area(cpu);\n\n\t/*\n\t * This is the last essential update to swapper_pgdir which needs\n\t * to be synchronized to initial_page_table on 32bit.\n\t */\n\tsync_initial_page_table();\n}",
+        "code_after_change": "void __init setup_cpu_entry_areas(void)\n{\n\tunsigned int cpu;\n\n\tinit_cea_offsets();\n\n\tsetup_cpu_entry_area_ptes();\n\n\tfor_each_possible_cpu(cpu)\n\t\tsetup_cpu_entry_area(cpu);\n\n\t/*\n\t * This is the last essential update to swapper_pgdir which needs\n\t * to be synchronized to initial_page_table on 32bit.\n\t */\n\tsync_initial_page_table();\n}",
+        "patch": "--- code before\n+++ code after\n@@ -1,6 +1,8 @@\n void __init setup_cpu_entry_areas(void)\n {\n \tunsigned int cpu;\n+\n+\tinit_cea_offsets();\n \n \tsetup_cpu_entry_area_ptes();\n ",
+        "function_modified_lines": {
+            "added": [
+                "",
+                "\tinit_cea_offsets();"
+            ],
+            "deleted": []
+        },
+        "cwe": [
+            "CWE-401"
+        ],
+        "cve_description": "A flaw possibility of memory leak in the Linux kernel cpu_entry_area mapping of X86 CPU data to memory was found in the way user can guess location of exception stack(s) or other important data. A local user could use this flaw to get access to some important data with expected location in memory.",
+        "id": 3835
+    },
+    {
+        "cve_id": "CVE-2023-0597",
+        "code_before_change": "static __init void setup_cpu_entry_area_ptes(void)\n{\n#ifdef CONFIG_X86_32\n\tunsigned long start, end;\n\n\t/* The +1 is for the readonly IDT: */\n\tBUILD_BUG_ON((CPU_ENTRY_AREA_PAGES+1)*PAGE_SIZE != CPU_ENTRY_AREA_MAP_SIZE);\n\tBUILD_BUG_ON(CPU_ENTRY_AREA_TOTAL_SIZE != CPU_ENTRY_AREA_MAP_SIZE);\n\tBUG_ON(CPU_ENTRY_AREA_BASE & ~PMD_MASK);\n\n\tstart = CPU_ENTRY_AREA_BASE;\n\tend = start + CPU_ENTRY_AREA_MAP_SIZE;\n\n\t/* Careful here: start + PMD_SIZE might wrap around */\n\tfor (; start < end && start >= CPU_ENTRY_AREA_BASE; start += PMD_SIZE)\n\t\tpopulate_extra_pte(start);\n#endif\n}",
+        "code_after_change": "static __init void setup_cpu_entry_area_ptes(void)\n{\n#ifdef CONFIG_X86_32\n\tunsigned long start, end;\n\n\t/* The +1 is for the readonly IDT: */\n\tBUILD_BUG_ON((CPU_ENTRY_AREA_PAGES+1)*PAGE_SIZE != CPU_ENTRY_AREA_MAP_SIZE);\n\tBUG_ON(CPU_ENTRY_AREA_BASE & ~PMD_MASK);\n\n\tstart = CPU_ENTRY_AREA_BASE;\n\tend = start + CPU_ENTRY_AREA_MAP_SIZE;\n\n\t/* Careful here: start + PMD_SIZE might wrap around */\n\tfor (; start < end && start >= CPU_ENTRY_AREA_BASE; start += PMD_SIZE)\n\t\tpopulate_extra_pte(start);\n#endif\n}",
+        "patch": "--- code before\n+++ code after\n@@ -5,7 +5,6 @@\n \n \t/* The +1 is for the readonly IDT: */\n \tBUILD_BUG_ON((CPU_ENTRY_AREA_PAGES+1)*PAGE_SIZE != CPU_ENTRY_AREA_MAP_SIZE);\n-\tBUILD_BUG_ON(CPU_ENTRY_AREA_TOTAL_SIZE != CPU_ENTRY_AREA_MAP_SIZE);\n \tBUG_ON(CPU_ENTRY_AREA_BASE & ~PMD_MASK);\n \n \tstart = CPU_ENTRY_AREA_BASE;",
+        "function_modified_lines": {
+            "added": [],
+            "deleted": [
+                "\tBUILD_BUG_ON(CPU_ENTRY_AREA_TOTAL_SIZE != CPU_ENTRY_AREA_MAP_SIZE);"
+            ]
+        },
+        "cwe": [
+            "CWE-401"
+        ],
+        "cve_description": "A flaw possibility of memory leak in the Linux kernel cpu_entry_area mapping of X86 CPU data to memory was found in the way user can guess location of exception stack(s) or other important data. A local user could use this flaw to get access to some important data with expected location in memory.",
+        "id": 3836
+    },
+    {
+        "cve_id": "CVE-2021-3736",
+        "code_before_change": "static void mbochs_remove(struct mdev_device *mdev)\n{\n\tstruct mdev_state *mdev_state = dev_get_drvdata(&mdev->dev);\n\n\tmbochs_used_mbytes -= mdev_state->type->mbytes;\n\tvfio_unregister_group_dev(&mdev_state->vdev);\n\tkfree(mdev_state->pages);\n\tkfree(mdev_state->vconfig);\n\tkfree(mdev_state);\n}",
+        "code_after_change": "static void mbochs_remove(struct mdev_device *mdev)\n{\n\tstruct mdev_state *mdev_state = dev_get_drvdata(&mdev->dev);\n\n\tvfio_unregister_group_dev(&mdev_state->vdev);\n\tatomic_add(mdev_state->type->mbytes, &mbochs_avail_mbytes);\n\tkfree(mdev_state->pages);\n\tkfree(mdev_state->vconfig);\n\tkfree(mdev_state);\n}",
+        "patch": "--- code before\n+++ code after\n@@ -2,8 +2,8 @@\n {\n \tstruct mdev_state *mdev_state = dev_get_drvdata(&mdev->dev);\n \n-\tmbochs_used_mbytes -= mdev_state->type->mbytes;\n \tvfio_unregister_group_dev(&mdev_state->vdev);\n+\tatomic_add(mdev_state->type->mbytes, &mbochs_avail_mbytes);\n \tkfree(mdev_state->pages);\n \tkfree(mdev_state->vconfig);\n \tkfree(mdev_state);",
+        "function_modified_lines": {
+            "added": [
+                "\tatomic_add(mdev_state->type->mbytes, &mbochs_avail_mbytes);"
+            ],
+            "deleted": [
+                "\tmbochs_used_mbytes -= mdev_state->type->mbytes;"
+            ]
+        },
+        "cwe": [
+            "CWE-401"
+        ],
+        "cve_description": "A flaw was found in the Linux kernel. A memory leak problem was found in mbochs_ioctl in samples/vfio-mdev/mbochs.c in Virtual Function I/O (VFIO) Mediated devices. This flaw could allow a local attacker to leak internal kernel information.",
+        "id": 3048
+    },
+    {
+        "cve_id": "CVE-2021-3736",
+        "code_before_change": "static ssize_t available_instances_show(struct mdev_type *mtype,\n\t\t\t\t\tstruct mdev_type_attribute *attr,\n\t\t\t\t\tchar *buf)\n{\n\tconst struct mbochs_type *type =\n\t\t&mbochs_types[mtype_get_type_group_id(mtype)];\n\tint count = (max_mbytes - mbochs_used_mbytes) / type->mbytes;\n\n\treturn sprintf(buf, \"%d\\n\", count);\n}",
+        "code_after_change": "static ssize_t available_instances_show(struct mdev_type *mtype,\n\t\t\t\t\tstruct mdev_type_attribute *attr,\n\t\t\t\t\tchar *buf)\n{\n\tconst struct mbochs_type *type =\n\t\t&mbochs_types[mtype_get_type_group_id(mtype)];\n\tint count = atomic_read(&mbochs_avail_mbytes) / type->mbytes;\n\n\treturn sprintf(buf, \"%d\\n\", count);\n}",
+        "patch": "--- code before\n+++ code after\n@@ -4,7 +4,7 @@\n {\n \tconst struct mbochs_type *type =\n \t\t&mbochs_types[mtype_get_type_group_id(mtype)];\n-\tint count = (max_mbytes - mbochs_used_mbytes) / type->mbytes;\n+\tint count = atomic_read(&mbochs_avail_mbytes) / type->mbytes;\n \n \treturn sprintf(buf, \"%d\\n\", count);\n }",
+        "function_modified_lines": {
+            "added": [
+                "\tint count = atomic_read(&mbochs_avail_mbytes) / type->mbytes;"
+            ],
+            "deleted": [
+                "\tint count = (max_mbytes - mbochs_used_mbytes) / type->mbytes;"
+            ]
+        },
+        "cwe": [
+            "CWE-401"
+        ],
+        "cve_description": "A flaw was found in the Linux kernel. A memory leak problem was found in mbochs_ioctl in samples/vfio-mdev/mbochs.c in Virtual Function I/O (VFIO) Mediated devices. This flaw could allow a local attacker to leak internal kernel information.",
+        "id": 3046
+    },
+    {
+        "cve_id": "CVE-2022-3630",
+        "code_before_change": "void __fscache_invalidate(struct fscache_cookie *cookie,\n\t\t\t  const void *aux_data, loff_t new_size,\n\t\t\t  unsigned int flags)\n{\n\tbool is_caching;\n\n\t_enter(\"c=%x\", cookie->debug_id);\n\n\tfscache_stat(&fscache_n_invalidates);\n\n\tif (WARN(test_bit(FSCACHE_COOKIE_RELINQUISHED, &cookie->flags),\n\t\t \"Trying to invalidate relinquished cookie\\n\"))\n\t\treturn;\n\n\tif ((flags & FSCACHE_INVAL_DIO_WRITE) &&\n\t    test_and_set_bit(FSCACHE_COOKIE_DISABLED, &cookie->flags))\n\t\treturn;\n\n\tspin_lock(&cookie->lock);\n\tset_bit(FSCACHE_COOKIE_NO_DATA_TO_READ, &cookie->flags);\n\tfscache_update_aux(cookie, aux_data, &new_size);\n\tcookie->inval_counter++;\n\ttrace_fscache_invalidate(cookie, new_size);\n\n\tswitch (cookie->state) {\n\tcase FSCACHE_COOKIE_STATE_INVALIDATING: /* is_still_valid will catch it */\n\tdefault:\n\t\tspin_unlock(&cookie->lock);\n\t\t_leave(\" [no %u]\", cookie->state);\n\t\treturn;\n\n\tcase FSCACHE_COOKIE_STATE_LOOKING_UP:\n\t\t__fscache_begin_cookie_access(cookie, fscache_access_invalidate_cookie);\n\t\tset_bit(FSCACHE_COOKIE_DO_INVALIDATE, &cookie->flags);\n\t\tfallthrough;\n\tcase FSCACHE_COOKIE_STATE_CREATING:\n\t\tspin_unlock(&cookie->lock);\n\t\t_leave(\" [look %x]\", cookie->inval_counter);\n\t\treturn;\n\n\tcase FSCACHE_COOKIE_STATE_ACTIVE:\n\t\tis_caching = fscache_begin_cookie_access(\n\t\t\tcookie, fscache_access_invalidate_cookie);\n\t\tif (is_caching)\n\t\t\t__fscache_set_cookie_state(cookie, FSCACHE_COOKIE_STATE_INVALIDATING);\n\t\tspin_unlock(&cookie->lock);\n\t\twake_up_cookie_state(cookie);\n\n\t\tif (is_caching)\n\t\t\tfscache_queue_cookie(cookie, fscache_cookie_get_inval_work);\n\t\t_leave(\" [inv]\");\n\t\treturn;\n\t}\n}",
+        "code_after_change": "void __fscache_invalidate(struct fscache_cookie *cookie,\n\t\t\t  const void *aux_data, loff_t new_size,\n\t\t\t  unsigned int flags)\n{\n\tbool is_caching;\n\n\t_enter(\"c=%x\", cookie->debug_id);\n\n\tfscache_stat(&fscache_n_invalidates);\n\n\tif (WARN(test_bit(FSCACHE_COOKIE_RELINQUISHED, &cookie->flags),\n\t\t \"Trying to invalidate relinquished cookie\\n\"))\n\t\treturn;\n\n\tif ((flags & FSCACHE_INVAL_DIO_WRITE) &&\n\t    test_and_set_bit(FSCACHE_COOKIE_DISABLED, &cookie->flags))\n\t\treturn;\n\n\tspin_lock(&cookie->lock);\n\tset_bit(FSCACHE_COOKIE_NO_DATA_TO_READ, &cookie->flags);\n\tfscache_update_aux(cookie, aux_data, &new_size);\n\tcookie->inval_counter++;\n\ttrace_fscache_invalidate(cookie, new_size);\n\n\tswitch (cookie->state) {\n\tcase FSCACHE_COOKIE_STATE_INVALIDATING: /* is_still_valid will catch it */\n\tdefault:\n\t\tspin_unlock(&cookie->lock);\n\t\t_leave(\" [no %u]\", cookie->state);\n\t\treturn;\n\n\tcase FSCACHE_COOKIE_STATE_LOOKING_UP:\n\t\tif (!test_and_set_bit(FSCACHE_COOKIE_DO_INVALIDATE, &cookie->flags))\n\t\t\t__fscache_begin_cookie_access(cookie, fscache_access_invalidate_cookie);\n\t\tfallthrough;\n\tcase FSCACHE_COOKIE_STATE_CREATING:\n\t\tspin_unlock(&cookie->lock);\n\t\t_leave(\" [look %x]\", cookie->inval_counter);\n\t\treturn;\n\n\tcase FSCACHE_COOKIE_STATE_ACTIVE:\n\t\tis_caching = fscache_begin_cookie_access(\n\t\t\tcookie, fscache_access_invalidate_cookie);\n\t\tif (is_caching)\n\t\t\t__fscache_set_cookie_state(cookie, FSCACHE_COOKIE_STATE_INVALIDATING);\n\t\tspin_unlock(&cookie->lock);\n\t\twake_up_cookie_state(cookie);\n\n\t\tif (is_caching)\n\t\t\tfscache_queue_cookie(cookie, fscache_cookie_get_inval_work);\n\t\t_leave(\" [inv]\");\n\t\treturn;\n\t}\n}",
+        "patch": "--- code before\n+++ code after\n@@ -30,8 +30,8 @@\n \t\treturn;\n \n \tcase FSCACHE_COOKIE_STATE_LOOKING_UP:\n-\t\t__fscache_begin_cookie_access(cookie, fscache_access_invalidate_cookie);\n-\t\tset_bit(FSCACHE_COOKIE_DO_INVALIDATE, &cookie->flags);\n+\t\tif (!test_and_set_bit(FSCACHE_COOKIE_DO_INVALIDATE, &cookie->flags))\n+\t\t\t__fscache_begin_cookie_access(cookie, fscache_access_invalidate_cookie);\n \t\tfallthrough;\n \tcase FSCACHE_COOKIE_STATE_CREATING:\n \t\tspin_unlock(&cookie->lock);",
+        "function_modified_lines": {
+            "added": [
+                "\t\tif (!test_and_set_bit(FSCACHE_COOKIE_DO_INVALIDATE, &cookie->flags))",
+                "\t\t\t__fscache_begin_cookie_access(cookie, fscache_access_invalidate_cookie);"
+            ],
+            "deleted": [
+                "\t\t__fscache_begin_cookie_access(cookie, fscache_access_invalidate_cookie);",
+                "\t\tset_bit(FSCACHE_COOKIE_DO_INVALIDATE, &cookie->flags);"
+            ]
+        },
+        "cwe": [
+            "CWE-401"
+        ],
+        "cve_description": "A vulnerability was found in Linux Kernel. It has been rated as problematic. This issue affects some unknown processing of the file fs/fscache/cookie.c of the component IPsec. The manipulation leads to memory leak. It is recommended to apply a patch to fix this issue. The associated identifier of this vulnerability is VDB-211931.",
+        "id": 3665
+    }
+]

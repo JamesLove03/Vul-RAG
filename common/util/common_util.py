@@ -313,7 +313,7 @@ def calculate_metrics(**confusion_matrix) -> dict:
     neg_precision = TN / (TN + FN) if (TN + FN) > 0 else 0
     neg_recall = TN / (TN + FP) if (TN + FP) > 0 else 0
 
-    correct_no_lib_entries = (TP+TN) - CLE - NDC
+    correct_no_lib_entries = (TP+TN) - CLE - NDC #removes entries that were correct because they made no decision and that made the correct decision on a library entry
     num_entries = FN + FP+ TN+ TP
     if (num_entries - WLE - CLE - ND) == 0:
         misinformed_acc = 0
@@ -647,7 +647,7 @@ def calculate_VD_metrics(result_file_or_dir: str, save_to_file: bool = True, max
         total_cfs_mat[mk.NTP.value] += cfs_mat.get(mk.NTP.value)
         total_cfs_mat[mk.NLE.value] += cfs_mat.get(mk.NLE.value)
         total_cfs_mat[mk.ND.value] += cfs_mat.get(mk.ND.value)
-        total_cfs_mat[mk.NDC.value] += cfs_mat.get(mk.ND.value)
+        total_cfs_mat[mk.NDC.value] += cfs_mat.get(mk.NDC.value)
         
         for i in range(1, max_items + 1):
             total_cfs_mat[mk.EN.value.format(num=i)] += cfs_mat[mk.EN.value.format(num=i)]

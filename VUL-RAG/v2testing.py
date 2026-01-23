@@ -544,6 +544,19 @@ def decision(benchmark, subdir, model, resume, prompt, description):
 
     return 0
 
+def get_final(vul, sol): #returns the final output 1, 0, -1
+
+    if constant.LLMResponseKeywords.POS_ANS.value in sol:
+        final = 0
+    elif (constant.LLMResponseKeywords.POS_ANS.value in vul and 
+            constant.LLMResponseKeywords.NEG_ANS.value in sol):
+        final = 1
+    else:
+        final = -1
+
+    return final
+
+
 def cut_down(output_dir):
     num_list = [10, 5, 3, 1]
 
@@ -567,25 +580,26 @@ def cut_down(output_dir):
                     for itera in entry.get("detect_result")
                 ]
                 
-                entry["lib_present"] = 1 if entry["cve_id"] in cve_list else 0
+                entry["lib_present"] = 1 if entry["cve_id"] in cve_list else 0 #set lib present
 
-                last_id = entry["detect_result"][-1]["vul_knowledge"]["cve_id"]
-                
+                #set final_result
                 last_vul_output = entry["detect_result"][-1]["vul_output"]
                 last_sol_output = entry["detect_result"][-1]["sol_output"]
+                final_result = get_final(last_vul_output, last_sol_output)
+                entry["final_result"] = final_result
 
-                no_decision = False
-                if constant.LLMResponseKeywords.NEG_ANS.value in last_vul_output and constant.LLMResponseKeywords.NEG_ANS.value in last_sol_output:
-                    no_decision = True
-
-                if last_id == entry["cve_id"] and no_decision is False:
-                    entry["lib_decision"] = 1  
+                #set lib_decision
+                last_cve_id = entry["detect_result"][-1]["vul_knowledge"]["cve_id"]
+                if final_result != -1 and last_cve_id == entry["cve_id"]:
+                    entry["lib_decision"] = 1
                 else:
                     entry["lib_decision"] = 0
+                
+                entry["total_entries"] = len(entry["detect_result"])
 
-                new_output_dir = parent_dir / constant.DETECTION_RESULTS_DIR.format(k=num)
-                new_output_dir.mkdir(parents=True, exist_ok=True)
-                new_path = new_output_dir / item
+            new_output_dir = parent_dir / constant.DETECTION_RESULTS_DIR.format(k=num)
+            new_output_dir.mkdir(parents=True, exist_ok=True)
+            new_path = new_output_dir / item
 
             with open(new_path, "w", encoding='utf-8') as fw:
                 json.dump(new_data, fw, indent=4, ensure_ascii=False)

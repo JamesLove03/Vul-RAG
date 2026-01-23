@@ -2,6 +2,7 @@ import argparse
 from components.knowledge_extractor import KnowledgeExtractor
 from common.util import common_util
 import common.config as cfg
+import pdb
 
 # "CWE-416": "Use After Free", !!
 # "CWE-125": "Out-of-bounds Read",
@@ -47,7 +48,7 @@ def parse_command_line_arguments():
         nargs = '*', 
         type = str, 
         help = 'The list of CWEs to store knowledge.',
-        default = []
+        default = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"]
     )
 
     parser.add_argument(
@@ -80,7 +81,7 @@ if __name__ == '__main__':
 
     args = parse_command_line_arguments()
     print("command line parsed\n")
-    KnowledgeE = KnowledgeExtractor(model_name = args.model_name)
+    KnowledgeE = KnowledgeExtractor(model_name = args.model_name, V2=True, benchmark="TruePairVul")
     #knowledge extraction
     print("begin extracting knowledge")
     if args.extract_knowledge:

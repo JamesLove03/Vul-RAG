@@ -5,14 +5,13 @@ from common.util.data_utils import DataUtils
 from .es_retrival import LLM4DetectionRetrieval
 from common import constant
 from common.util import common_util
-
+from pathlib import Path
 import common.constant as constant
 from common.constant import KnowledgeDocumentName as kdn
 from common.model_manager import ModelManager
 import logging
 import pdb
 from common.common_prompt import ExtractionPrompt
-from pathlib import Path
 
 # "CWE-416": "Use After Free", !!
 # "CWE-125": "Out-of-bounds Read",
@@ -61,7 +60,7 @@ class KnowledgeExtractor:
         
         if self.V2: #sets the input and output paths
             try:
-                self.data_lst = DataUtils.load_json(PathUtil.clean_dataV2(constant.TEST_DATA_FILE_NAME.format(cwe_id = CWE_name), "json", self.benchmark))
+                self.data_lst = DataUtils.load_json(PathUtil.clean_dataV2(constant.CLEAN_DATA_FILE_NAME.format(cwe_id = CWE_name), "json", self.benchmark))
             except Exception as e:
                 logging.error(f"Error in loading data: {e}")
 
@@ -85,22 +84,34 @@ class KnowledgeExtractor:
 
             model_settings_dict = kwargs.get("model_settings_dict", {})
             
-            output_path = PathUtil.knowledge_extraction_output(
-                constant.VUL_KNOWLEDGE_PATTERN_FILE_NAME.format(
-                    model_name = self.model_instance.get_model_name(), 
-                    cwe_id = CWE_name
-                ),
-                "json"
+            if self.V2: 
+                output_path = PathUtil.knowledge_extraction_output_V2(
+                    constant.VUL_KNOWLEDGE_PATTERN_FILE_NAME.format(
+                        model_name = self.model_instance.get_model_name(),
+                        cwe_id = CWE_name
+                    ),
+                    "json"
+                )
+            else:
+                output_path = PathUtil.knowledge_extraction_output(
+                    constant.VUL_KNOWLEDGE_PATTERN_FILE_NAME.format(
+                        model_name = self.model_instance.get_model_name(), 
+                        cwe_id = CWE_name
+                    ),
+                    "json"
+                )
+        
+        processed_path = PathUtil.knowledge_extraction_output_V2(
+                "metrics/processed_ids",
+                "json", self.benchmark
             )
-            
+        Path(processed_path).parent.mkdir(parents=True, exist_ok=True)
+
         #add json file so that resuming can go normally
         if PathUtil.check_file_exists(output_path) and resume:
             current_knowledge_pattern = DataUtils.load_json(output_path)
             output_list = current_knowledge_pattern
-            processed_path = PathUtil.knowledge_extraction_output_V2(
-                "metrics/processed_ids",
-                "json", self.benchmark
-            )
+        
             with open(processed_path, "r") as f:
                 processed_ids = set(json.load(f))
             print(processed_ids)
@@ -137,75 +148,61 @@ class KnowledgeExtractor:
                 function_messages = self.model_instance.get_messages(function_prompt, constant.DEFAULT_SYS_PROMPT)
                 messages = self.model_instance.get_messages(analysis_prompt, constant.DEFAULT_SYS_PROMPT)
 
-                if self.V2:
-                    #Did not feel necessary to add here
-                    return 0
-                else:
-                    processed_ids.add(item["id"])
+                
+                processed_ids.add(item["id"])
 
-                    purpose_output = self.model_instance.get_response_with_messages(purpose_messages, **model_settings_dict)
-                    if(purpose_output is None):
-                        logging.warning(f"Skipping{item['cve_id']} due to missing purpose_output")
-                        continue
-                    # get function
-                    function_output = self.model_instance.get_response_with_messages(function_messages, **model_settings_dict)
-                    if(function_output is None):
-                        logging.warning(f"Skipping{item['cve_id']} due to missing function_output")
-                        continue
-                    
-                    # get analysis
-                    analysis_output = self.model_instance.get_response_with_messages(messages, **model_settings_dict)
-                    if(analysis_output is None):
-                        logging.warning(f"Skipping{item['cve_id']} due to missing analysis_output")
-                        continue
-                    
-                    messages.append({"role": "assistant", "content": analysis_output})
-                    messages.append({"role": "user", "content": knowledge_extraction_prompt})
-                    vul_knowledge_output = self.model_instance.get_response_with_messages(messages, **model_settings_dict)
-                    if(vul_knowledge_output is None):
-                        logging.warning(f"Skipping{item['cve_id']} due to missing vul_knowledge_output")
-                        continue
+                purpose_output = self.model_instance.get_response_with_messages(purpose_messages, **model_settings_dict)
+                if(purpose_output is None):
+                    logging.warning(f"Skipping{item['cve_id']} due to missing purpose_output")
+                    continue
+                # get function
+                function_output = self.model_instance.get_response_with_messages(function_messages, **model_settings_dict)
+                if(function_output is None):
+                    logging.warning(f"Skipping{item['cve_id']} due to missing function_output")
+                    continue
+                
+                # get analysis
+                analysis_output = self.model_instance.get_response_with_messages(messages, **model_settings_dict)
+                if(analysis_output is None):
+                    logging.warning(f"Skipping{item['cve_id']} due to missing analysis_output")
+                    continue
+                
+                messages.append({"role": "assistant", "content": analysis_output})
+                messages.append({"role": "user", "content": knowledge_extraction_prompt})
+                vul_knowledge_output = self.model_instance.get_response_with_messages(messages, **model_settings_dict)
+                if(vul_knowledge_output is None):
+                    logging.warning(f"Skipping{item['cve_id']} due to missing vul_knowledge_output")
+                    continue
 
-                    output_dict = self.get_dict(vul_knowledge_output)
-                    output_dict["GPT_analysis"] = analysis_output
-                    output_dict["GPT_purpose"] = common_util.extract_LLM_response_by_prefix(
-                        purpose_output,
-                        constant.LLMResponseSeparator.FUN_PURPOSE_SEP.value
-                    )
-                    output_dict["GPT_function"] = common_util.extract_LLM_response_by_prefix(
-                        function_output,
-                        constant.LLMResponseSeparator.FUN_FUNCTION_SEP.value
-                    )
-                    output_dict["CVE_id"] = item["cve_id"]
-                    output_dict["code_before_change"] = item["code_before_change"]
-                    output_dict["code_after_change"] = item["code_after_change"]
-                    output_dict["modified_lines"] = item["function_modified_lines"]
-                    output_dict["true_id"] = item["id"]
-                    output_list[item["cve_id"]].append(output_dict)
+                output_dict = self.get_dict(vul_knowledge_output)
+                output_dict["GPT_analysis"] = analysis_output
+                output_dict["GPT_purpose"] = common_util.extract_LLM_response_by_prefix(
+                    purpose_output,
+                    constant.LLMResponseSeparator.FUN_PURPOSE_SEP.value
+                )
+                output_dict["GPT_function"] = common_util.extract_LLM_response_by_prefix(
+                    function_output,
+                    constant.LLMResponseSeparator.FUN_FUNCTION_SEP.value
+                )
+                output_dict["CVE_id"] = item["cve_id"]
+                output_dict["code_before_change"] = item["code_before_change"]
+                output_dict["code_after_change"] = item["code_after_change"]
+                output_dict["modified_lines"] = item["function_modified_lines"]
+                output_dict["true_id"] = item["id"]
+                output_list[item["cve_id"]].append(output_dict)
                 
                     #save progress to the dumpfile
-                    with open(processed_path, "w") as f:
-                        json.dump(list(processed_ids), f)
+                with open(processed_path, "w") as f:
+                    json.dump(list(processed_ids), f)
 
             except Exception as e:
                 logging.error(f"Error in extracting knowledge for {item['cve_id']}: {e}")
                 pdb.set_trace()
             
-            if not self.V2:
-                DataUtils.save_json(output_path, output_list)
-                self.format_knowledge_file(output_path)
+            DataUtils.save_json(output_path, output_list)
+            self.format_knowledge_file(output_path)
 
-        if self.V2:
-            #run the batch request
-            self.model_instance.start_batch()
-            
-            #poll until the batch returns
-            self.model_instance.check_batch()
-            #generate and run the second batch (to generate the final item)
-
-            #iterate through returned item and generate the output dict UPDATE PROCESSED IDS CORRECTLY
-
-            #write the output dict and call format_knowledge_file
+        
 
     def document_store(self, cwe_name_list):
         
