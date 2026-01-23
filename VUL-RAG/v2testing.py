@@ -29,7 +29,7 @@ from components.VulRAG import VulRAGDetector
 def get_cwes(benchmark): #returns a list of CWE values
 
     if benchmark == "PairVul":
-        cwes = ["CWE-TEST1", "CWE-TEST2"] #use these for testing
+        cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"] #use these for testing
         #cwes = ["CWE-119", "CWE-362", "CWE-416", "CWE-476", "CWE-787"]
     elif benchmark == "TruePairVul":
         cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"]
@@ -556,7 +556,6 @@ def get_final(vul, sol): #returns the final output 1, 0, -1
 
     return final
 
-
 def cut_down(output_dir):
     num_list = [10, 5, 3, 1]
 
@@ -606,7 +605,6 @@ def cut_down(output_dir):
 
     for num in num_list:
         calculate_VD_metrics(str(parent_dir / constant.DETECTION_RESULTS_DIR.format(k=num)), max_items=num, V2=True)
-
 
 def extract_confidence(text: str):
     """

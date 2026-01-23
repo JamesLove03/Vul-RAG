@@ -19,10 +19,10 @@ import os
 output_dir = os.path.join(os.path.dirname(__file__), '..', 'output', 'reranker_data')
 
 used_path = os.path.join(output_dir, "used.json")
-final_data_path = os.path.join(output_dir, "PairVul/PairVul_final_data.json")
+final_data_path = os.path.join(output_dir, "final_data.json")
 kfold_results_path = os.path.join(output_dir, "kfold_results.json")
 
-def train_model():
+def train_model(benchmark):
     X = [] #holds the lists of 6 ratings
     y = [] #holds 1/0 for correct or incorrect
     #Get CWE Item from test file
@@ -55,7 +55,8 @@ def train_model():
         VulD = VulRAGDetector("gpt-4o", "gpt-4o", knowledge_path)
         VulD.update_retrievers(cwe_id)
 
-        test_clean_data_path = PathUtil.test_data(constant.TEST_DATA_FILE_NAME.format(cwe_id = cwe_id), "json")
+        #test_clean_data_path = PathUtil.test_data(constant.TEST_DATA_FILE_NAME.format(cwe_id = cwe_id), "json")
+        test_clean_data_path = PathUtil.reranker_test(constant.TEST_DATA_FILE_NAME.format(cwe_id = cwe_id), 'json', benchmark)
         test_clean_data = DataUtils.load_json(test_clean_data_path)
         cve_list = test_clean_data
         
@@ -108,8 +109,6 @@ def train_model():
                 if entry["label"] == 1:
                     pos_reg += 1
                 group.append(entry["group_id"])
-
-
 
             with open(final_data_path, "w") as f:
                 json.dump(raw_list, f, indent=2)
@@ -188,11 +187,12 @@ def train_model():
         results.append(fold_result)
 
     with open(kfold_results_path, "w") as f:
-        json.dump(results + "\nPositive: {pos_reg_fin} \n Negative: {neg_reg_fin}", f, indent=4)
+        f.write(json.dumps(results, indent=4)) 
+        f.write(f"\n\nPositive: {pos_reg_fin}\nNegative: {neg_reg_fin}")
     
     return
 
-def load_model():
+def test_model():
     
     with open(final_data_path, "r") as f:
         raw_list = json.load(f)
@@ -201,69 +201,94 @@ def load_model():
     labels = [item["label"] for item in raw_list]
     group = [item["group_id"] for item in raw_list]
 
-
     X = np.array(scores)
     y = np.array(labels)
+    sample_to_group = np.array(group)
 
     group_kf = GroupKFold(n_splits=5)
     fold_idx = 0
-
-    #This code will create sample to group mapping
-    sample_to_group = np.array(group)
     results = []
-    for train_index, val_index in group_kf.split(X, y, groups = sample_to_group):
+
+    # Try to load existing results to append
+    if os.path.exists(kfold_results_path):
+        with open(kfold_results_path, "r") as f:
+            try:
+                results = json.load(f)
+            except json.JSONDecodeError:
+                results = []
+
+    for train_index, val_index in group_kf.split(X, y, groups=sample_to_group):
         fold_idx += 1
-        #divide the data into folds
+        # Split data
         X_train, X_val = X[train_index], X[val_index]
         y_train, y_val = y[train_index], y[val_index]
-        
-        train_groups, train_counts = np.unique(sample_to_group[train_index], return_counts=True)
-        val_groups, val_counts = np.unique(sample_to_group[val_index], return_counts=True)
 
+        # Compute group sizes for LambdaRank
+        _, train_counts = np.unique(sample_to_group[train_index], return_counts=True)
+        _, val_counts = np.unique(sample_to_group[val_index], return_counts=True)
         train_group_sizes = train_counts.tolist()
         val_group_sizes = val_counts.tolist()
-        
 
-        #use Dataset wrapper
+        # Prepare LightGBM datasets
         train_data = lgb.Dataset(X_train, label=y_train, group=train_group_sizes)
         valid_data = lgb.Dataset(X_val, label=y_val, reference=train_data, group=val_group_sizes)
-        #set params to be binary 1/0
+
+        # LambdaRank parameters
         params = {
             'objective': 'lambdarank',
             'metric': 'ndcg',
-            'ndcg_eval_at': [1, 3, 5],
+            'ndcg_eval_at': [1, 3, 5, 10],
             'learning_rate': 0.1,
             'num_leaves': 31,
             'min_data_in_leaf': 20,
             'verbose': -1
         }
-        #train the model on data using one fold to 
-        model = lgb.train(params, 
-                      train_data, 
-                      num_boost_round=100,
-                      valid_sets=[valid_data],
-                      callbacks=[lgb.early_stopping(stopping_rounds=10)],
-                      )
-        #output info about scoring across folds
+
+        # Train the model with early stopping
+        model = lgb.train(
+            params,
+            train_data,
+            num_boost_round=100,
+            valid_sets=[valid_data],
+            callbacks=[lgb.early_stopping(stopping_rounds=10)]
+        )
+
+        # Predictions & accuracy
         y_pred = model.predict(X_val)
         y_pred_labels = (y_pred > 0.5).astype(int)
         acc = accuracy_score(y_val, y_pred_labels)
-        model.save_model(os.path.join(output_dir, (f"model_fold_{fold_idx}.txt")))     
-        train_len = len(train_index)
-        val_len = len(val_index)
-        
+
+        # Save model
+        model_path = os.path.join(output_dir, f"model_fold_{fold_idx}.txt")
+        model.save_model(model_path)
+
+        # Capture LightGBM evaluation results
+        # Only keep best iteration in history to reduce JSON size
+        ndcg_best = {}
+        if hasattr(model, "eval_valid") and model.eval_valid() is not None:
+            # eval_valid() returns a list of tuples: (dataset, metric, value, is_higher_better)
+            for dataset, metric, value, _ in model.eval_valid():
+                if dataset not in ndcg_best:
+                    ndcg_best[dataset] = {}
+                ndcg_best[dataset][metric] = value
+
         fold_result = {
             "fold": fold_idx,
-            "train_size": train_len,
-            "valid_size": val_len,
+            "train_size": len(train_index),
+            "valid_size": len(val_index),
             "accuracy": acc,
+            "best_iteration": model.best_iteration,
+            "best_score": model.best_score,  # contains ndcg@1,3,5,10 for valid set
+            "ndcg_best_iteration": ndcg_best
         }
+
         results.append(fold_result)
 
+    # Write all folds (appended) to JSON
     with open(kfold_results_path, "w") as f:
         json.dump(results, f, indent=4)
-    
+
     return
 
 if __name__ == '__main__':
-    load_model()
+    test_model()

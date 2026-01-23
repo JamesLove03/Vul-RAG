@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
-from common.constant import DATA_DIR, OUTPUT_DIR, LOGS_DIR, COMMON_DIR, V2_TESTSET_DIR, V2_ENHANCED_DATA_DIR, V2_TRAINING_DIR, V2_ELASTIC_READY_DIR
+from common.constant import DATA_DIR, OUTPUT_DIR, LOGS_DIR, COMMON_DIR, V2_TESTSET_DIR, V2_ENHANCED_DATA_DIR, V2_TRAINING_DIR, V2_ELASTIC_READY_DIR, V2_LEARNED_RERANKER_DIR
 
 
 class PathUtil:
@@ -67,6 +67,18 @@ class PathUtil:
     @staticmethod
     def clean_dataV2(filename: str, ext: str, benchmark: str):
         path = Path(V2_TRAINING_DIR.format(benchmark = benchmark))
+        path = path / f'{filename}.{ext}'
+        return str(path)
+    
+    @staticmethod
+    def reranker_training(filename: str, ext: str, benchmark: str):
+        path = Path(V2_LEARNED_RERANKER_DIR.format(benchmark=benchmark)) / 'train'
+        path = path / f'{filename}.{ext}'
+        return str(path)
+
+    @staticmethod
+    def reranker_test(filename: str, ext: str, benchmark: str):
+        path = Path(V2_LEARNED_RERANKER_DIR.format(benchmark=benchmark)) / 'test'
         path = path / f'{filename}.{ext}'
         return str(path)
 

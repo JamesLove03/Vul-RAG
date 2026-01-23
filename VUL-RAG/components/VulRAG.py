@@ -298,7 +298,7 @@ class VulRAGDetector:
         for d in dicts:
             all_keys.update(d.keys())
 
-        for key in tqdm(all_keys):
+        for key in all_keys:
             scores = []
             for d in dicts:
                 if key not in d:
@@ -316,7 +316,7 @@ class VulRAGDetector:
         for d in dicts:
             all_keys.update(d.keys())
 
-        for key in tqdm(all_keys):
+        for key in all_keys:
             scores = []
             for i, d in enumerate(dicts):
                 if key not in d:
