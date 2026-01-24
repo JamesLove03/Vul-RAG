@@ -1,3 +1,6 @@
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 import numpy as np
 import lightgbm as lgb
 from sklearn.model_selection import GroupKFold
@@ -14,8 +17,7 @@ import openai
 from tqdm import tqdm
 import random
 import json
-import sys
-import os
+import pdb
 output_dir = os.path.join(os.path.dirname(__file__), '..', 'output', 'reranker_data')
 
 used_path = os.path.join(output_dir, "used.json")
@@ -193,7 +195,7 @@ def train_model(benchmark):
     return
 
 def test_model():
-    
+
     with open(final_data_path, "r") as f:
         raw_list = json.load(f)
 
@@ -206,89 +208,112 @@ def test_model():
     sample_to_group = np.array(group)
 
     group_kf = GroupKFold(n_splits=5)
-    fold_idx = 0
-    results = []
 
-    # Try to load existing results to append
-    if os.path.exists(kfold_results_path):
-        with open(kfold_results_path, "r") as f:
-            try:
-                results = json.load(f)
-            except json.JSONDecodeError:
-                results = []
+    # Keep track of the best average NDCG
+    best_avg_ndcg = -np.inf
+    best_params = None
 
-    for train_index, val_index in group_kf.split(X, y, groups=sample_to_group):
-        fold_idx += 1
-        # Split data
-        X_train, X_val = X[train_index], X[val_index]
-        y_train, y_val = y[train_index], y[val_index]
+    # Placeholder loops for parameter grid
+    for learning_rate in [0.01, 0.03, 0.05, 0.1, 0.15, 0.2]:  # fill values later
+        for num_leaves in [7, 15, 31, 63, 127]:  # fill values later
+            for min_data_in_leaf in [5, 10, 20, 30, 50]:  # fill values later
+                for stopping_rounds in [5, 10, 20]:
+                    params = {
+                        'objective': 'lambdarank',
+                        'metric': 'ndcg',
+                        'ndcg_eval_at': [1, 3, 5, 10],
+                        'learning_rate': learning_rate,
+                        'num_leaves': num_leaves,
+                        'min_data_in_leaf': min_data_in_leaf,
+                        'verbose': -1
+                    }
 
-        # Compute group sizes for LambdaRank
-        _, train_counts = np.unique(sample_to_group[train_index], return_counts=True)
-        _, val_counts = np.unique(sample_to_group[val_index], return_counts=True)
-        train_group_sizes = train_counts.tolist()
-        val_group_sizes = val_counts.tolist()
+                    # Store per-fold results temporarily
+                    fold_results = []
+                    fold_ndcgs = []
+                    fold_idx = 0
 
-        # Prepare LightGBM datasets
-        train_data = lgb.Dataset(X_train, label=y_train, group=train_group_sizes)
-        valid_data = lgb.Dataset(X_val, label=y_val, reference=train_data, group=val_group_sizes)
+                    for train_index, val_index in group_kf.split(X, y, groups=sample_to_group):
+                        fold_idx += 1
+                        # Split data
+                        X_train, X_val = X[train_index], X[val_index]
+                        y_train, y_val = y[train_index], y[val_index]
 
-        # LambdaRank parameters
-        params = {
-            'objective': 'lambdarank',
-            'metric': 'ndcg',
-            'ndcg_eval_at': [1, 3, 5, 10],
-            'learning_rate': 0.1,
-            'num_leaves': 31,
-            'min_data_in_leaf': 20,
-            'verbose': -1
-        }
+                        # Compute group sizes for LambdaRank
+                        _, train_counts = np.unique(sample_to_group[train_index], return_counts=True)
+                        _, val_counts = np.unique(sample_to_group[val_index], return_counts=True)
+                        train_group_sizes = train_counts.tolist()
+                        val_group_sizes = val_counts.tolist()
 
-        # Train the model with early stopping
-        model = lgb.train(
-            params,
-            train_data,
-            num_boost_round=100,
-            valid_sets=[valid_data],
-            callbacks=[lgb.early_stopping(stopping_rounds=10)]
-        )
+                        # Prepare LightGBM datasets
+                        train_data = lgb.Dataset(X_train, label=y_train, group=train_group_sizes)
+                        valid_data = lgb.Dataset(X_val, label=y_val, reference=train_data, group=val_group_sizes)
 
-        # Predictions & accuracy
-        y_pred = model.predict(X_val)
-        y_pred_labels = (y_pred > 0.5).astype(int)
-        acc = accuracy_score(y_val, y_pred_labels)
+                        evals_result = {}
+                        record_callback = lgb.record_evaluation(evals_result)
+                        # Train the model with early stopping
+                        model = lgb.train(
+                            params,
+                            train_data,
+                            num_boost_round=500,
+                            valid_sets=[valid_data],
+                            callbacks=[lgb.early_stopping(stopping_rounds=stopping_rounds), record_callback]
+                        )
 
-        # Save model
-        model_path = os.path.join(output_dir, f"model_fold_{fold_idx}.txt")
-        model.save_model(model_path)
+                        # Predictions & accuracy
+                        y_pred = model.predict(X_val)
+                        y_pred_labels = (y_pred > 0.5).astype(int)
+                        acc = accuracy_score(y_val, y_pred_labels)
 
-        # Capture LightGBM evaluation results
-        # Only keep best iteration in history to reduce JSON size
-        ndcg_best = {}
-        if hasattr(model, "eval_valid") and model.eval_valid() is not None:
-            # eval_valid() returns a list of tuples: (dataset, metric, value, is_higher_better)
-            for dataset, metric, value, _ in model.eval_valid():
-                if dataset not in ndcg_best:
-                    ndcg_best[dataset] = {}
-                ndcg_best[dataset][metric] = value
+                        # Capture NDCG at best iteration
+                        ndcg_best = {}
+                        if "valid_0" in evals_result:
+                            for metric_name, values in evals_result["valid_0"].items():
+                                # values is a list of metric per iteration
+                                ndcg_best[metric_name] = values[model.best_iteration - 1]  # get best iteration
 
-        fold_result = {
-            "fold": fold_idx,
-            "train_size": len(train_index),
-            "valid_size": len(val_index),
-            "accuracy": acc,
-            "best_iteration": model.best_iteration,
-            "best_score": model.best_score,  # contains ndcg@1,3,5,10 for valid set
-            "ndcg_best_iteration": ndcg_best
-        }
+                        # Compute average NDCG for this fold
+                        ndcg_values = list(ndcg_best.values())  # [0.8275, 0.7803, 0.7898, 0.8461]
+                        fold_ndcg = float(np.mean(ndcg_values))  # average across @1,3,5,10
+                        fold_ndcgs.append(fold_ndcg)
 
-        results.append(fold_result)
+                        # Prepare fold result (not yet written)
+                        fold_result = {
+                            "fold": fold_idx,
+                            "train_size": len(train_index),
+                            "valid_size": len(val_index),
+                            "accuracy": acc,
+                            "best_iteration": model.best_iteration,
+                            "best_score": model.best_score,
+                            "ndcg_average_score": fold_ndcg,
+                            "parameters": params,
+                            "early_stopping": stopping_rounds
+                        }
 
-    # Write all folds (appended) to JSON
-    with open(kfold_results_path, "w") as f:
-        json.dump(results, f, indent=4)
+                        fold_results.append((fold_result, model))  # keep model reference for saving if best
 
-    return
+                    # Compute average NDCG across folds
+                    avg_ndcg_across_folds = np.mean(fold_ndcgs)
+
+                    # Compare to previous best
+                    if avg_ndcg_across_folds > best_avg_ndcg:
+                        best_avg_ndcg = avg_ndcg_across_folds
+                        best_params = params
+
+                        # Save fold models and results only for best
+                        for fold_result, model in fold_results:
+                            fold_idx = fold_result["fold"]
+                            model_path = os.path.join(output_dir, f"model_fold_{fold_idx}.txt")
+                            model.save_model(model_path)
+
+                        # Append new best folds
+                        all_results = [fold_result for fold_result, _ in fold_results]
+
+                        with open(kfold_results_path, "w") as f:
+                            json.dump(all_results, f, indent=4)
+
+    return best_avg_ndcg, best_params
+
 
 if __name__ == '__main__':
     test_model()
