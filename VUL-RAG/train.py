@@ -214,10 +214,10 @@ def test_model():
     best_params = None
 
     # Placeholder loops for parameter grid
-    for learning_rate in [0.01, 0.03, 0.05, 0.1, 0.15, 0.2]:  # fill values later
-        for num_leaves in [7, 15, 31, 63, 127]:  # fill values later
-            for min_data_in_leaf in [5, 10, 20, 30, 50]:  # fill values later
-                for stopping_rounds in [5, 10, 20]:
+    for learning_rate in [0.01, 0.03, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3]: 
+        for num_leaves in [3, 5, 7, 15, 31, 63, 127]: 
+            for min_data_in_leaf in [5, 10, 20, 30, 50, 75, 100]:  
+                for stopping_rounds in [5, 10, 20, 30, 40]:
                     params = {
                         'objective': 'lambdarank',
                         'metric': 'ndcg',
@@ -316,4 +316,5 @@ def test_model():
 
 
 if __name__ == '__main__':
-    test_model()
+    #test_model()
+    train_model("PairVul")

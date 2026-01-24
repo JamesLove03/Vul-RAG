@@ -686,6 +686,7 @@ class VulRAGDetector:
         queries = [code_snippet, code_embed, function, function_embed, purpose, purpose_embed]
         
         response = self.fill_blanks(es_purpose, es_function, es_code, dicts, queries)
+        #response = self.fill_empty_blanks(dicts)
 
         #load final data with response + label 1
         label = 0
@@ -717,7 +718,10 @@ class VulRAGDetector:
 
         dicts = [code_answer, code_embed_answer, function_answer, function_embed_answer, purpose_answer, purpose_embed_answer]
         queries = [code_snippet, code_embed, function, function_embed, purpose, purpose_embed]
-        response = self.fill_blanks(es_purpose, es_function, es_code, dicts, queries)        
+        
+        response = self.fill_blanks(es_purpose, es_function, es_code, dicts, queries)
+        #response = self.fill_empty_blanks(dicts)        
+        
         #load final data with label 1
         label = 1
         for key, entry in response.items():
