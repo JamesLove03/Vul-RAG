@@ -1,0 +1,157 @@
+[
+    {
+        "fold": 1,
+        "train_size": 5358,
+        "valid_size": 1341,
+        "accuracy": 0.6853094705443699,
+        "best_iteration": 4,
+        "best_score": {
+            "valid_0": {
+                "ndcg@1": 0.8817204301075269,
+                "ndcg@3": 0.8485098313486181,
+                "ndcg@5": 0.8474170061681825,
+                "ndcg@10": 0.8893019573571922
+            }
+        },
+        "ndcg_average_score": 0.8667373062453799,
+        "parameters": {
+            "objective": "lambdarank",
+            "metric": "ndcg",
+            "ndcg_eval_at": [
+                1,
+                3,
+                5,
+                10
+            ],
+            "learning_rate": 0.3,
+            "num_leaves": 7,
+            "min_data_in_leaf": 20,
+            "verbose": -1
+        },
+        "early_stopping": 10
+    },
+    {
+        "fold": 2,
+        "train_size": 5360,
+        "valid_size": 1339,
+        "accuracy": 0.690067214339059,
+        "best_iteration": 5,
+        "best_score": {
+            "valid_0": {
+                "ndcg@1": 0.8913043478260869,
+                "ndcg@3": 0.8521266439909823,
+                "ndcg@5": 0.8613420354579562,
+                "ndcg@10": 0.8966470728836015
+            }
+        },
+        "ndcg_average_score": 0.8753550250396568,
+        "parameters": {
+            "objective": "lambdarank",
+            "metric": "ndcg",
+            "ndcg_eval_at": [
+                1,
+                3,
+                5,
+                10
+            ],
+            "learning_rate": 0.3,
+            "num_leaves": 7,
+            "min_data_in_leaf": 20,
+            "verbose": -1
+        },
+        "early_stopping": 10
+    },
+    {
+        "fold": 3,
+        "train_size": 5360,
+        "valid_size": 1339,
+        "accuracy": 0.6908140403286034,
+        "best_iteration": 18,
+        "best_score": {
+            "valid_0": {
+                "ndcg@1": 0.9130434782608695,
+                "ndcg@3": 0.8942876021385047,
+                "ndcg@5": 0.8974906552090095,
+                "ndcg@10": 0.9076234823209319
+            }
+        },
+        "ndcg_average_score": 0.9031113044823289,
+        "parameters": {
+            "objective": "lambdarank",
+            "metric": "ndcg",
+            "ndcg_eval_at": [
+                1,
+                3,
+                5,
+                10
+            ],
+            "learning_rate": 0.3,
+            "num_leaves": 7,
+            "min_data_in_leaf": 20,
+            "verbose": -1
+        },
+        "early_stopping": 10
+    },
+    {
+        "fold": 4,
+        "train_size": 5360,
+        "valid_size": 1339,
+        "accuracy": 0.6938013442867812,
+        "best_iteration": 8,
+        "best_score": {
+            "valid_0": {
+                "ndcg@1": 0.8043478260869565,
+                "ndcg@3": 0.7745409721932776,
+                "ndcg@5": 0.8153181892462377,
+                "ndcg@10": 0.8578256037147056
+            }
+        },
+        "ndcg_average_score": 0.8130081478102944,
+        "parameters": {
+            "objective": "lambdarank",
+            "metric": "ndcg",
+            "ndcg_eval_at": [
+                1,
+                3,
+                5,
+                10
+            ],
+            "learning_rate": 0.3,
+            "num_leaves": 7,
+            "min_data_in_leaf": 20,
+            "verbose": -1
+        },
+        "early_stopping": 10
+    },
+    {
+        "fold": 5,
+        "train_size": 5358,
+        "valid_size": 1341,
+        "accuracy": 0.727069351230425,
+        "best_iteration": 22,
+        "best_score": {
+            "valid_0": {
+                "ndcg@1": 0.8817204301075269,
+                "ndcg@3": 0.8704316316484673,
+                "ndcg@5": 0.8610523747227592,
+                "ndcg@10": 0.8954510493888269
+            }
+        },
+        "ndcg_average_score": 0.877163871466895,
+        "parameters": {
+            "objective": "lambdarank",
+            "metric": "ndcg",
+            "ndcg_eval_at": [
+                1,
+                3,
+                5,
+                10
+            ],
+            "learning_rate": 0.3,
+            "num_leaves": 7,
+            "min_data_in_leaf": 20,
+            "verbose": -1
+        },
+        "early_stopping": 10
+    }
+]
