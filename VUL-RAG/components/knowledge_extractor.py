@@ -208,13 +208,13 @@ class KnowledgeExtractor:
         for cwe_name in cwe_name_list:
             if self.V2:
                 #set doc_path to new path
-                # input_dir = Path(constant.V2_ELASTIC_READY_DIR.format(benchmark=self.benchmark))
-                # input_filename = constant.VUL_KNOWLEDGE_PATTERN_FILE_NAME.format(
-                #         model_name = "gpt-3.5-turbo",
-                #         cwe_id = cwe_name
-                #     ) + ".json" 
-                # doc_path = input_dir / input_filename 
-                doc_path = PathUtil.reranker_training(constant.VUL_KNOWLEDGE_PATTERN_FILE_NAME.format(cwe_id = cwe_name, model_name = 'gpt-3.5-turbo'), "json", self.benchmark)
+                input_dir = Path(constant.V2_ELASTIC_READY_DIR.format(benchmark=self.benchmark))
+                input_filename = constant.VUL_KNOWLEDGE_PATTERN_FILE_NAME.format(
+                        model_name = "gpt-3.5-turbo",
+                        cwe_id = cwe_name
+                    ) + ".json" 
+                doc_path = input_dir / input_filename 
+                #doc_path = PathUtil.reranker_training(constant.VUL_KNOWLEDGE_PATTERN_FILE_NAME.format(cwe_id = cwe_name, model_name = 'gpt-3.5-turbo'), "json", self.benchmark)
                 self.data_lst = DataUtils.load_json(doc_path)
 
             else:              

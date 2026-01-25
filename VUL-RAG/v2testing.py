@@ -10,6 +10,7 @@ from datetime import datetime
 
 from tqdm import tqdm
 import re
+import numpy as np
 from common import constant
 import copy
 from pathlib import Path
@@ -29,8 +30,8 @@ from components.VulRAG import VulRAGDetector
 def get_cwes(benchmark): #returns a list of CWE values
 
     if benchmark == "PairVul":
-        cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"] #use these for testing
-        #cwes = ["CWE-119", "CWE-362", "CWE-416", "CWE-476", "CWE-787"]
+        #cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"] #use these for testing
+        cwes = ["CWE-401"]
     elif benchmark == "TruePairVul":
         cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"]
     return cwes
@@ -51,10 +52,10 @@ def parse_command_line_arguments():
         help = 'file descriptor of the specific test being run'
     )
     parser.add_argument(
-        '--learned',
-        action= 'store_true',
-        default=False,
-        help='triggers using the learned reranker and embeddings'
+        '--search_type',
+        type=int,
+        default=0,
+        help='signifies the search type. See search for details'
     )
     parser.add_argument(
         '--new_directory',
@@ -264,8 +265,61 @@ def load_elastic(benchmark):
 
     KnowledgeE.document_store(cwe_name_list=cwes)
 
+def count_cve_matches(item, cve, embed):
+    seen_ids = set()
+    total_matches = 0
 
-def search(benchmark, desc, k, learned, dir):
+    if embed == 1:
+        fields = ["purpose", "function", "code", "purpose_emb", "function_emb", "code_emb"]
+    elif embed == 0:
+        fields = ["purpose", "function", "code"]
+    elif embed == 2:
+        fields = ["purpose_emb", "function_emb", "code_emb"]
+
+    for field in fields:
+        entries = item.get(field, {})
+        for entry in entries.values():
+            if entry["id"] not in seen_ids:
+                seen_ids.add(entry["id"])
+                if entry["cve_id"] == cve:
+                    total_matches += 1
+    
+    return total_matches
+
+id_cve_cache = {}
+
+def format_learned_response(benchmark, cwe, response):
+    ordered_keys = list(response.keys())  # these are strings like '2143'
+    scores_array = [response[key]["scores"] for key in ordered_keys]
+
+    cache_key = (benchmark, cwe)
+    if cache_key not in id_cve_cache:
+        path = (
+            Path(constant.V2_RAWDATA_DIR.format(benchmark=benchmark))
+            / constant.RAW_DATA_FILE_NAME.format(cwe_id=cwe)
+        ).with_suffix(".json")
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        # Use string keys so they match your response
+        id_cve_cache[cache_key] = {str(x["id"]): x["cve_id"] for x in data}
+
+    id_to_cve = id_cve_cache[cache_key]
+
+    total_dict = {}
+    for i, key in enumerate(ordered_keys):
+        cve_id = id_to_cve.get(key)
+        if cve_id is None:
+            continue
+
+        total_dict[key] = {
+            "cve_id": cve_id,
+            "id": key,
+            "scores": scores_array[i],
+        }
+
+    return total_dict
+
+def search(benchmark, desc, k, search_type, dir):
     cwes = get_cwes(benchmark)
     input_dir = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark))
     if dir is None:
@@ -274,9 +328,10 @@ def search(benchmark, desc, k, learned, dir):
         output_dir = Path(constant.V2_SEARCH_RESULTS_DIR.format(benchmark=benchmark)) / f'{dir}'
 
     orig_data_dir = Path(constant.V2_TESTSET_DIR.format(benchmark=benchmark))
-    indexes = ["CWE-119", "CWE-416"]
+    valid_dir = Path(constant.V2_ELASTIC_READY_DIR.format(benchmark=benchmark))
+
     #define input path, and output path
-    for cwe, index in zip(cwes, indexes):
+    for cwe in cwes:
         print(f"Now searching {cwe}")
         start_time = datetime.now()
 
@@ -286,25 +341,36 @@ def search(benchmark, desc, k, learned, dir):
         output_path = output_dir / output_file
         orig_data_file = constant.TEST_DATA_FILE_NAME.format(cwe_id=cwe)
         orig_data_path = (orig_data_dir / orig_data_file).with_suffix(".json")
+        valid_file_name = constant.VUL_KNOWLEDGE_PATTERN_FILE_NAME.format(model_name='gpt-3.5-turbo', cwe_id=cwe) + '.json'
+        valid_path = str(valid_dir / valid_file_name)
+
+        with open(valid_path, "r", encoding="utf-8") as f:
+            valid_data = json.load(f)
+
+        max_items_per_cve = { #gets the maximum number of CVE items in a cve_id. This is used for recall normalized
+            cve_id: len(items)
+            for cve_id, items in valid_data.items()
+        }
 
         with open(orig_data_path, "r", encoding="utf-8") as f:
             test_data = json.load(f)
 
         VulD = VulRAGDetector("gpt-3.5-turbo", "gpt-3.5-turbo", input_path)
         
-
-        #CHANGE THIS BACK FOR IT TO WORK CORRECTLY
-        VulD.update_retrievers(index)
-        #DO NOT FORGET TO CHANGE THIS
-
+        VulD.update_retrievers(cwe)
 
         start_time = datetime.now()
         total_results = []
-        total_length = 0
+        total_vul_length = 0
+        total_non_vul_length = 0
+        total_vul_items_found = 0
+        total_non_vul_items_found = 0
+        total_max_items = 0
 
         for value in tqdm(test_data):
             
             id = value["id"]
+            cve_id = value["cve_id"]
             vul_code_snippet = value["code_before_change"]
             non_vul_code_snippet = value["code_after_change"]
 
@@ -314,21 +380,68 @@ def search(benchmark, desc, k, learned, dir):
             vul_function = VulD.vul_knowledge.get(f"{id}FV")
             non_vul_function = VulD.vul_knowledge.get(f"{id}FN")
 
-            if learned:
-                vul_knowledge_list = VulD.retrieve_learned_knowledge(cwe, vul_code_snippet, vul_purpose, vul_function, k, True)
-                non_vul_knowledge_list = VulD.retrieve_learned_knowledge(cwe, non_vul_code_snippet, non_vul_purpose, non_vul_function, k, True)
-                length = len(vul_knowledge_list) + len(non_vul_knowledge_list)
-            else:
-                vul_knowledge_list = VulD.retrieve_knowledge(cwe, vul_code_snippet, vul_purpose, vul_function, k, True)
-                non_vul_knowledge_list = VulD.retrieve_knowledge(cwe, non_vul_code_snippet, non_vul_purpose, non_vul_function, k, True)
-                length = k*6
+            if search_type == 0: #searches only off of BM25
+                vul_knowledge_list = VulD.retrieve_knowledge(cwe, vul_code_snippet, vul_purpose, vul_function, k, True, search_type)
+                non_vul_knowledge_list = VulD.retrieve_knowledge(cwe, non_vul_code_snippet, non_vul_purpose, non_vul_function, k, True, search_type)
+                vul_items_found = count_cve_matches(vul_knowledge_list, cve_id, 0)
+                non_vul_items_found = count_cve_matches(non_vul_knowledge_list, cve_id, 0)
 
-            total_length += length
+            elif search_type == 1: # searches BM25 and embeddings
+                vul_knowledge_list = VulD.retrieve_knowledge(cwe, vul_code_snippet, vul_purpose, vul_function, k, True, search_type)
+                non_vul_knowledge_list = VulD.retrieve_knowledge(cwe, non_vul_code_snippet, non_vul_purpose, non_vul_function, k, True, search_type)
+                vul_items_found = count_cve_matches(vul_knowledge_list, cve_id, 1)
+                non_vul_items_found = count_cve_matches(non_vul_knowledge_list, cve_id, 1)
+
+            elif search_type == 2: #searches embeddings only
+                vul_knowledge_list = VulD.retrieve_knowledge(cwe, vul_code_snippet, vul_purpose, vul_function, k, True, search_type)
+                non_vul_knowledge_list = VulD.retrieve_knowledge(cwe, non_vul_code_snippet, non_vul_purpose, non_vul_function, k, True, search_type)
+                vul_items_found = count_cve_matches(vul_knowledge_list, cve_id, 2)
+                non_vul_items_found = count_cve_matches(non_vul_knowledge_list, cve_id, 2)
+
+            elif search_type == 3: #searches learned with backfill 0
+                vul_knowledge_list = VulD.retrieve_learned_knowledge(cwe, vul_code_snippet, vul_purpose, vul_function, k, False, True)
+                non_vul_knowledge_list = VulD.retrieve_learned_knowledge(cwe, non_vul_code_snippet, non_vul_purpose, non_vul_function, k, False, True)
+                vul_knowledge_list = format_learned_response(benchmark, cwe, vul_knowledge_list)
+                non_vul_knowledge_list = format_learned_response(benchmark, cwe, non_vul_knowledge_list)
+
+                vul_items_found = sum(1 for item in vul_knowledge_list.values()
+                                      if cve_id == item["cve_id"])
+                non_vul_items_found = sum(1 for item in non_vul_knowledge_list.values()
+                                      if cve_id == item["cve_id"])
+
+            elif search_type == 4: #searches learned with backfill values
+                vul_knowledge_list = VulD.retrieve_learned_knowledge(cwe, vul_code_snippet, vul_purpose, vul_function, k, True, True)
+                non_vul_knowledge_list = VulD.retrieve_learned_knowledge(cwe, non_vul_code_snippet, non_vul_purpose, non_vul_function, k, True, True)
+                vul_knowledge_list = format_learned_response(benchmark, cwe, vul_knowledge_list)
+                non_vul_knowledge_list = format_learned_response(benchmark, cwe, non_vul_knowledge_list)
+                
+                vul_items_found = sum(1 for item in vul_knowledge_list.values()
+                                      if cve_id == item["cve_id"])
+                non_vul_items_found = sum(1 for item in non_vul_knowledge_list.values()
+                                      if cve_id == item["cve_id"])
+            else:
+                raise Exception("invalid search_type value. Should be 0-4")
+
+
+            vul_length = len(vul_knowledge_list) 
+            non_vul_length = len(non_vul_knowledge_list)
+
+            total_vul_length += vul_length
+            total_non_vul_length += non_vul_length
+            
+            max_items = max_items_per_cve.get(cve_id, 0)
+            if max_items > 0:
+                total_max_items += max_items #this is the number of max items for only a single side (vul / non_vul)
+                total_vul_items_found += vul_items_found
+                total_non_vul_items_found += non_vul_items_found
+
             total_results.append({
                 "id": id,
+                "cve_id": cve_id,
+                "vul_length": vul_length,
+                "non_vul_length": non_vul_length,
                 "vul_knowledge": vul_knowledge_list,
                 "non_vul_knowledge": non_vul_knowledge_list,
-                "total_length": length,
             })
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -341,22 +454,25 @@ def search(benchmark, desc, k, learned, dir):
         output_log_path = output_dir / "metrics" / f"{cwe}log.json"
         input_log_path = input_dir / 'metrics' / f"{cwe}log.json"
 
-        fill_search_log(f"Searching elasticsearch for {cwe} using full fill_blanks methodology", 
-                        len(test_data), 
-                        total_length, 
-                        learned, 
+        fill_search_log(f"Searching elasticsearch for {cwe}", 
+                        len(test_data)*2, 
+                        total_vul_length + total_non_vul_length, 
+                        search_type, 
                         str(input_log_path), 
                         str(output_log_path), 
                         runtime, 
-                        k)
+                        k,
+                        total_max_items,
+                        total_non_vul_items_found,
+                        total_vul_items_found
+                        )
 
-            
     print("Done searching all files")
     merge_search_log((output_dir / "metrics"), 
                      (input_dir / 'metrics' / "final_log.json"),
-                     learned,
+                     search_type,
                      k,
-                     (output_dir / 'metrics' / 'final_log.json')
+                     (output_dir / 'metrics' / 'final_log.json'),
                      )
 
 
@@ -782,10 +898,10 @@ if __name__ == '__main__':
         load_elastic(args.benchmark)
 
     elif args.action == 'search':
-        search(args.benchmark, args.model, args.top_K, args.learned, args.new_directory)
+        search(args.benchmark, args.model, args.top_K, args.search_type, args.new_directory)
 
     elif args.action == 'rerank':
-        rerank(args.benchmark, args.learned, args.top_K, args.model, args.top_N, args.input_dir, args.new_directory)
+        rerank(args.benchmark, args.search_type, args.top_K, args.model, args.top_N, args.input_dir, args.new_directory)
 
     elif args.action == 'decision':
         decision(args.benchmark, args.input_dir, args.model, args.resume, args.prompt, args.desc)

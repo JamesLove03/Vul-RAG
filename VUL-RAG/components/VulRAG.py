@@ -182,24 +182,45 @@ class VulRAGDetector:
             })
         return formatted_answer_list
 
-    def retrieve_knowledge(self, cwe_name, code_snippet, purpose, function, top_N=10, early_exit=False):
+    def retrieve_knowledge(self, cwe_name, code_snippet, purpose, function, top_K=10, early_exit=False, embed=0):
         logging.disable(logging.INFO)
         
         es_purpose = self.purp
         es_function = self.func
         es_code = self.code
 
-        #search bm25 results
-        purpose_answer = es_purpose.search_cve(query = purpose, idx = 2, filteridx = 2, cve_id=1, top_k=top_N)
-        function_answer = es_function.search_cve(query = function, idx = 1, filteridx = 2, cve_id=1, top_k=top_N)        
-        code_answer = es_code.search_cve(query = code_snippet, idx = 0, filteridx = 2, cve_id=1, top_k=top_N)   
+        final_dict = {}
 
+        #search bm25 results
+        if embed != 2:
+            purpose_answer = es_purpose.search_cve(query = purpose, idx = 2, filteridx = 2, cve_id=1, top_k=top_K)
+            function_answer = es_function.search_cve(query = function, idx = 1, filteridx = 2, cve_id=1, top_k=top_K)        
+            code_answer = es_code.search_cve(query = code_snippet, idx = 0, filteridx = 2, cve_id=1, top_k=top_K) 
+
+            final_dict.update({
+                "purpose": purpose_answer,
+                "function": function_answer,
+                "code": code_answer
+            })
+
+        elif embed != 0:
+            #generate embedding
+            purpose_emb_answer = es_purpose.search_embed_cve(self.embedder(purpose), 0, 2, cwe_name, top_K)
+            function_emb_answer = es_function.search_embed_cve(self.embedder(function), 0, 2, cwe_name, top_K)
+            code_emb_answer = es_code.search_embed_cve(self.embedder(code_snippet), 0, 2, cwe_name, top_K)
+
+            final_dict.update({
+                "purpose_emb": purpose_emb_answer,
+                "function_emb": function_emb_answer,
+                "code_emb": code_emb_answer
+            })
+            
         # enable logging info
         logging.disable(logging.NOTSET)
 
-        if early_exit:
-            return (purpose_answer, function_answer, code_answer)
-
+        if early_exit :
+            return final_dict
+    
         return self.format_retrieved_answer(purpose_answer, function_answer, code_answer)
 
     def format_retrieved_answer_by_code(self, code_before_answer, code_after_answer):
@@ -368,7 +389,7 @@ class VulRAGDetector:
             combined[key] = {"scores": scores}
         return combined
 
-    def retrieve_learned_knowledge(self, cwe_name, code_snippet, purpose, function, top_N=10, early_exit=False):
+    def retrieve_learned_knowledge(self, cwe_name, code_snippet, purpose, function, top_k=10, backfill=True, early_exit=False):
 
         #generate embeddings for passed queries
         purpose_embed = self.embedder(purpose)
@@ -381,18 +402,21 @@ class VulRAGDetector:
         es_code = self.code
 
         #search bm25 results
-        purpose_answer = es_purpose.search_cve(query = purpose, idx = 2, filteridx = 2, cve_id=1, top_k=top_N)
-        function_answer = es_function.search_cve(query = function, idx = 1, filteridx = 2, cve_id=1, top_k=top_N)        
-        code_answer = es_code.search_cve(query = code_snippet, idx = 0, filteridx = 2, cve_id=1, top_k=top_N)   
+        purpose_answer = es_purpose.search_cve(query = purpose, idx = 2, filteridx = 2, cve_id=1, top_k=top_k)
+        function_answer = es_function.search_cve(query = function, idx = 1, filteridx = 2, cve_id=1, top_k=top_k)        
+        code_answer = es_code.search_cve(query = code_snippet, idx = 0, filteridx = 2, cve_id=1, top_k=top_k)   
 
         #search emb results
-        purpose_embed_answer = es_purpose.search_embed_cve(query = purpose_embed, idx = 2, filteridx = 2, cve_id=1, top_k=top_N)
-        function_embed_answer = es_function.search_embed_cve(query = function_embed, idx = 1, filteridx = 2, cve_id=1, top_k=top_N)        
-        code_embed_answer = es_code.search_embed_cve(query = code_embed, idx = 0, filteridx = 2, cve_id=1, top_k=top_N)
+        purpose_embed_answer = es_purpose.search_embed_cve(query = purpose_embed, idx = 2, filteridx = 2, cve_id=1, top_k=top_k)
+        function_embed_answer = es_function.search_embed_cve(query = function_embed, idx = 1, filteridx = 2, cve_id=1, top_k=top_k)        
+        code_embed_answer = es_code.search_embed_cve(query = code_embed, idx = 0, filteridx = 2, cve_id=1, top_k=top_k)
         #call fill_blanks
         dicts = [code_answer, code_embed_answer, function_answer, function_embed_answer, purpose_answer, purpose_embed_answer]
         queries = [code_snippet, code_embed, function, function_embed, purpose, purpose_embed]
-        response = self.fill_blanks(es_purpose, es_function, es_code, dicts, queries)  
+        if backfill:
+            response = self.fill_blanks(es_purpose, es_function, es_code, dicts, queries)  
+        else:
+            response = self.fill_empty_blanks(dicts)
 
         #if we want a early return perform that here
         if early_exit:

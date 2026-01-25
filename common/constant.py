@@ -91,8 +91,23 @@ class MetricsKeywords(Enum):
     VB = "Vul Brier Score"
     SB = "Sol Brier Score"
 
-BATCH_LOG_FORMAT = {"custom_id": "", "batch_runtime": 0, "input_tokens": 0, "output_tokens": 0, "total_batch_items": 0, "model_name": "", "prev_log": ""}
-SEARCH_LOG_FORMAT = {"custom_id": "", "runtime": 0, "searched_items": 0, "returned_items": 0, "embeddings_included": "", "prev_log": "", "K-value": 0}
+BATCH_LOG_FORMAT = {
+    "custom_id": "",
+    "batch_runtime": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_batch_items": 0,
+    "model_name": "",
+    "prev_log": ""
+}
+SEARCH_LOG_FORMAT = {
+    "custom_id": "",
+    "runtime": 0,
+    "searched_items": 0,
+    "returned_items": 0,
+    "prev_log": "",
+    "K-value": 0
+}
 
 
 class KnowledgeDocumentName(Enum):
@@ -119,6 +134,7 @@ MODEL_DIR = str(Path(ROOT_DIR) / "model")
 COMMON_DIR = str(Path(ROOT_DIR) / "common")
 
 #V2 file paths and names
+V2_RAWDATA_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "1_raw_data" / "raw_data")
 V2_TRAINING_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "1_raw_data" / "train")
 V2_TESTSET_DIR =  str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "3_enhanced_data" / "test_set")
 V2_ENHANCED_DATA_DIR = str(Path(ROOT_DIR) / "partial" / "{benchmark}" / "3_enhanced_data")
@@ -143,6 +159,7 @@ VUL_KNOWLEDGE_PATTERN_FILE_NAME = "{model_name}_{cwe_id}_316_pattern_all"
 ES_INDEX_NAME_TEMPLATE = "gpt3_316{lower_cwe_id}_{lower_document_name}"
 TEST_DATA_FILE_NAME = "Linux_kernel_{cwe_id}_clean_data_testset_new"
 CLEAN_DATA_FILE_NAME = "Linux_kernel_{cwe_id}_clean_data"
+RAW_DATA_FILE_NAME = "Linux_kernel_{cwe_id}"
 BASELINE_RESULT_FILE_NAME = "{cwe_id}_{model_name}_detection_baseline_{baseline_settings}"
 VULRAG_DETECTION_RESULT_FILE_NAME = "{cwe_id}_{model_name}-{summary_model_name}_VulRAG-detection_{model_settings}"
 LOG_DIR_NAME = "tracker_output"

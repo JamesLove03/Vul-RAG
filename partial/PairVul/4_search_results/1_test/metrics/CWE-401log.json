@@ -1,0 +1,1 @@
+{"custom_id": "Searching elasticsearch for CWE-401", "runtime": 1.00407405, "searched_items": 52, "returned_items": 156, "prev_log": "/home/ludhamm/Code/Vul-RAG_Research/Vul-RAG/partial/PairVul/3_enhanced_data/metrics/CWE-401log.json", "K-value": 5, "search_type": 1, "normalized_recall": 1.0, "max_items": 54, "found_items": 54}
