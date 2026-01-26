@@ -61,7 +61,7 @@ def fill_batch_log(id, inp, out, num_items, modelname, prev_path, output_path, r
         json.dump(entry, f)
         f.write("\n")
 
-def merge_search_log(search_log_dir, prev_path, search_type, k_val, output_path):
+def merge_search_log(search_log_dir, prev_path, search_type, k_val, output_path, recallatk):
     searched = 0
     returned = 0
     runtime = 0
@@ -79,7 +79,7 @@ def merge_search_log(search_log_dir, prev_path, search_type, k_val, output_path)
         max_items += data["max_items"]
         found_items += data["found_items"]
 
-    normalized_recall = found_items / max_items
+    coverage = found_items / max_items
 
     entry = copy.deepcopy(constant.SEARCH_LOG_FORMAT)
     entry["custom_id"] = "Final merged log for searching BEFORE reranking. Performed using full fill blanks."
@@ -90,7 +90,13 @@ def merge_search_log(search_log_dir, prev_path, search_type, k_val, output_path)
     entry["search_type"] = search_type
     entry["prev_log"] = str(prev_path)
     entry["K-value"] = k_val
-    entry["normalized_recall"] = round(normalized_recall, cfg.METRICS_DECIMAL_PLACES_RESERVED)
+    entry["coverage"] = coverage
+    
+    for k in recallatk:
+        recallatk[k] = round(recallatk[k], cfg.METRICS_DECIMAL_PLACES_RESERVED)
+
+    entry["recall_at_k"] = recallatk
+
 
     with output_path.open("a", encoding="utf-8") as f:
         json.dump(entry, f)
@@ -107,8 +113,8 @@ def fill_search_log(id, num_items, returned_items, search_type, prev_path, outpu
     entry["prev_log"] = prev_path
     entry["K-value"] = k_val
 
-    normalized_recall = (vul_found + non_vul_found) / (max_items*2)
-    entry["normalized_recall"] = round(normalized_recall, cfg.METRICS_DECIMAL_PLACES_RESERVED)
+    coverage = (vul_found + non_vul_found) / (max_items*2)
+    entry["coverage"] = round(coverage, cfg.METRICS_DECIMAL_PLACES_RESERVED)
     entry["max_items"] = max_items*2
     entry["found_items"] = (vul_found + non_vul_found)
 

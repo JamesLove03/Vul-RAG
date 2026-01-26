@@ -25,13 +25,13 @@ from common.model_manager import ModelManager
 from common.util.common_util import fill_batch_log, merge_batch_logs, fill_search_log, merge_search_log, calculate_VD_metrics
 from components.knowledge_extractor import KnowledgeExtractor
 from components.VulRAG import VulRAGDetector
+from collections import defaultdict
 
 
 def get_cwes(benchmark): #returns a list of CWE values
 
     if benchmark == "PairVul":
-        #cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"] #use these for testing
-        cwes = ["CWE-401"]
+        cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"] 
     elif benchmark == "TruePairVul":
         cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"]
     return cwes
@@ -265,26 +265,68 @@ def load_elastic(benchmark):
 
     KnowledgeE.document_store(cwe_name_list=cwes)
 
-def count_cve_matches(item, cve, embed):
-    seen_ids = set()
-    total_matches = 0
-
-    if embed == 1:
-        fields = ["purpose", "function", "code", "purpose_emb", "function_emb", "code_emb"]
-    elif embed == 0:
-        fields = ["purpose", "function", "code"]
-    elif embed == 2:
-        fields = ["purpose_emb", "function_emb", "code_emb"]
+def rrf_fuse(item, fields, k_rrf=60):
+    """
+    Perform Reciprocal Rank Fusion over selected fields.
+    Returns a dict: {item_id: fused_score}
+    """
+    rrf_scores = {}
 
     for field in fields:
         entries = item.get(field, {})
-        for entry in entries.values():
-            if entry["id"] not in seen_ids:
-                seen_ids.add(entry["id"])
-                if entry["cve_id"] == cve:
-                    total_matches += 1
+
+        # sort by score descending → rank order
+        ranked = sorted(entries.values(), key=lambda x: x["score"], reverse=True)
+        for rank, entry in enumerate(ranked, start=1):
+            item_id = entry["id"]
+            if item_id not in rrf_scores:
+                rrf_scores[item_id] = {"score": 0.0, "cve_id": entry["cve_id"]}
+
+            rrf_scores[item_id]["score"] += 1.0 / (k_rrf + rank)
+
+    return rrf_scores
+
+def count_cve_matches(item, target_cve, embed_mode):
+    return {
+        k: recall_at_k_rrf(item, target_cve, k, embed_mode)
+        for k in [1, 3, 5, 10]
+    }
     
-    return total_matches
+def recall_at_k_rrf(item, target_cve, k, embed_mode):    
+    if embed_mode == 0:
+        fields = ["purpose", "function", "code"]
+    elif embed_mode == 1:
+        fields = ["purpose", "function", "code",
+                  "purpose_emb", "function_emb", "code_emb"]
+    elif embed_mode == 2:
+        fields = ["purpose_emb", "function_emb", "code_emb"]
+    else:
+        raise ValueError("Invalid embed_mode")
+
+    # Step 1: RRF fuse
+    fused_scores = rrf_fuse(item, fields)
+
+    # Step 2: global top-K
+    top_k_ids = sorted(
+        fused_scores.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )[:k]
+
+    # Step 3: dedupe + recall
+    retrieved_ids = {item_id for item_id, _ in top_k_ids}
+
+    relevant_ids = set()
+    for field in fields:
+        for entry in item.get(field, {}).values():
+            if entry["cve_id"] == target_cve:
+                relevant_ids.add(entry["id"])
+
+    if not relevant_ids:
+        return 0.0  # or skip this query entirely
+
+    hits = len(retrieved_ids & relevant_ids)
+    return hits / len(relevant_ids)
 
 id_cve_cache = {}
 
@@ -319,6 +361,27 @@ def format_learned_response(benchmark, cwe, response):
 
     return total_dict
 
+def count_found_items(item, cve, embed):
+    seen_ids = set()
+    total_matches = 0
+
+    if embed == 1:
+        fields = ["purpose", "function", "code", "purpose_emb", "function_emb", "code_emb"]
+    elif embed == 0:
+        fields = ["purpose", "function", "code"]
+    elif embed == 2:
+        fields = ["purpose_emb", "function_emb", "code_emb"]
+
+    for field in fields:
+        entries = item.get(field, {})
+        for entry in entries.values():
+            if entry["id"] not in seen_ids:
+                seen_ids.add(entry["id"])
+                if entry["cve_id"] == cve:
+                    total_matches += 1
+    
+    return total_matches
+
 def search(benchmark, desc, k, search_type, dir):
     cwes = get_cwes(benchmark)
     input_dir = Path(constant.V2_ENHANCED_DATA_DIR.format(benchmark=benchmark))
@@ -329,6 +392,8 @@ def search(benchmark, desc, k, search_type, dir):
 
     orig_data_dir = Path(constant.V2_TESTSET_DIR.format(benchmark=benchmark))
     valid_dir = Path(constant.V2_ELASTIC_READY_DIR.format(benchmark=benchmark))
+    all_items = []
+    num_possible_items = 0
 
     #define input path, and output path
     for cwe in cwes:
@@ -380,23 +445,43 @@ def search(benchmark, desc, k, search_type, dir):
             vul_function = VulD.vul_knowledge.get(f"{id}FV")
             non_vul_function = VulD.vul_knowledge.get(f"{id}FN")
 
+            max_items = max_items_per_cve.get(cve_id, 0)
+
             if search_type == 0: #searches only off of BM25
                 vul_knowledge_list = VulD.retrieve_knowledge(cwe, vul_code_snippet, vul_purpose, vul_function, k, True, search_type)
                 non_vul_knowledge_list = VulD.retrieve_knowledge(cwe, non_vul_code_snippet, non_vul_purpose, non_vul_function, k, True, search_type)
-                vul_items_found = count_cve_matches(vul_knowledge_list, cve_id, 0)
-                non_vul_items_found = count_cve_matches(non_vul_knowledge_list, cve_id, 0)
+                vul_items_found = count_found_items(vul_knowledge_list, cve_id, search_type)
+                non_vul_items_found = count_found_items(non_vul_knowledge_list, cve_id, search_type)
+                all_items.append({
+                    "vul_knowledge": vul_knowledge_list,
+                    "non_vul_knowledge": non_vul_knowledge_list,
+                    "target_cve": cve_id,
+                    "max_items": max_items
+                })
 
             elif search_type == 1: # searches BM25 and embeddings
                 vul_knowledge_list = VulD.retrieve_knowledge(cwe, vul_code_snippet, vul_purpose, vul_function, k, True, search_type)
                 non_vul_knowledge_list = VulD.retrieve_knowledge(cwe, non_vul_code_snippet, non_vul_purpose, non_vul_function, k, True, search_type)
-                vul_items_found = count_cve_matches(vul_knowledge_list, cve_id, 1)
-                non_vul_items_found = count_cve_matches(non_vul_knowledge_list, cve_id, 1)
+                vul_items_found = count_found_items(vul_knowledge_list, cve_id, search_type)
+                non_vul_items_found = count_found_items(non_vul_knowledge_list, cve_id, search_type)
+                all_items.append({
+                    "vul_knowledge": vul_knowledge_list,
+                    "non_vul_knowledge": non_vul_knowledge_list,
+                    "target_cve": cve_id,
+                    "max_items": max_items
+                })
 
             elif search_type == 2: #searches embeddings only
                 vul_knowledge_list = VulD.retrieve_knowledge(cwe, vul_code_snippet, vul_purpose, vul_function, k, True, search_type)
                 non_vul_knowledge_list = VulD.retrieve_knowledge(cwe, non_vul_code_snippet, non_vul_purpose, non_vul_function, k, True, search_type)
-                vul_items_found = count_cve_matches(vul_knowledge_list, cve_id, 2)
-                non_vul_items_found = count_cve_matches(non_vul_knowledge_list, cve_id, 2)
+                vul_items_found = count_found_items(vul_knowledge_list, cve_id, search_type)
+                non_vul_items_found = count_found_items(non_vul_knowledge_list, cve_id, search_type)
+                all_items.append({
+                    "vul_knowledge": vul_knowledge_list,
+                    "non_vul_knowledge": non_vul_knowledge_list,
+                    "target_cve": cve_id,
+                    "max_items": max_items
+                })
 
             elif search_type == 3: #searches learned with backfill 0
                 vul_knowledge_list = VulD.retrieve_learned_knowledge(cwe, vul_code_snippet, vul_purpose, vul_function, k, False, True)
@@ -429,7 +514,7 @@ def search(benchmark, desc, k, search_type, dir):
             total_vul_length += vul_length
             total_non_vul_length += non_vul_length
             
-            max_items = max_items_per_cve.get(cve_id, 0)
+            
             if max_items > 0:
                 total_max_items += max_items #this is the number of max items for only a single side (vul / non_vul)
                 total_vul_items_found += vul_items_found
@@ -451,6 +536,7 @@ def search(benchmark, desc, k, search_type, dir):
         end_time = datetime.now()
         runtime = ((end_time - start_time).total_seconds()) / 60 # gets runtime in minutes
 
+        num_possible_items += total_max_items
         output_log_path = output_dir / "metrics" / f"{cwe}log.json"
         input_log_path = input_dir / 'metrics' / f"{cwe}log.json"
 
@@ -468,12 +554,51 @@ def search(benchmark, desc, k, search_type, dir):
                         )
 
     print("Done searching all files")
+
+    if search_type < 3:
+        if search_type == 0:
+            real_field = ["purpose", "function", "code"]
+        elif search_type == 1:
+            real_field = ["purpose", "function", "code",
+                        "purpose_emb", "function_emb", "code_emb"]
+        elif search_type == 2:
+            real_field = ["purpose_emb", "function_emb", "code_emb"]
+
+        recall_at_k = {1: 0, 3: 0, 5: 0, 10: 0}
+        total_relevant_items = 0 
+
+        for item in all_items:
+            if item["max_items"] == 0:
+                continue  # skip items with no possible relevant entries
+            
+            total_relevant_items += 2  # count this item once
+
+            for field in ["vul_knowledge", "non_vul_knowledge"]:
+                fused = rrf_fuse(item[field], fields=real_field)
+                ordered_fused = sorted(fused.items(), key=lambda x: x[1]["score"], reverse=True)
+
+                for K in [1, 3, 5, 10]:
+                    top_k_list = ordered_fused[:K]
+                    num_correct = sum(
+                        1 for _, entry in top_k_list if entry["cve_id"] == item["target_cve"]
+                    )
+                    recall_at_k[K] += num_correct / item["max_items"]
+
+        # average across all valid items
+        for K in [1, 3, 5, 10]:
+            recall_at_k[K] /= total_relevant_items
+        
+    else:
+        recall_at_k = {}
+
     merge_search_log((output_dir / "metrics"), 
-                     (input_dir / 'metrics' / "final_log.json"),
-                     search_type,
-                     k,
-                     (output_dir / 'metrics' / 'final_log.json'),
-                     )
+                    (input_dir / 'metrics' / "final_log.json"),
+                    search_type,
+                    k,
+                    (output_dir / 'metrics' / 'final_log.json'),
+                    recall_at_k
+                    )
+
 
 
 def rerank(benchmark, learned, k, desc, top_N, subdir, new_dir):
@@ -569,7 +694,6 @@ def rerank(benchmark, learned, k, desc, top_N, subdir, new_dir):
                      (output_dir / 'metrics' / 'final_log.json')
                      )
     return 0
-
 
 def decision(benchmark, subdir, model, resume, prompt, description):
 
@@ -883,7 +1007,6 @@ def run_decision(vul_knowledge, code_snippet, query_cve, model_instance, purpose
             "total_entries": total_entries,
             }
             
-
 if __name__ == '__main__':
 
     args = parse_command_line_arguments()
@@ -898,7 +1021,14 @@ if __name__ == '__main__':
         load_elastic(args.benchmark)
 
     elif args.action == 'search':
-        search(args.benchmark, args.model, args.top_K, args.search_type, args.new_directory)
+        if args.all:
+            search(args.benchmark, args.model, args.top_K, 0, "FINAL_bm25")
+            search(args.benchmark, args.model, args.top_K, 1, "FINAL_bm25+embed")
+            search(args.benchmark, args.model, args.top_K, 2, "FINAL_embed")
+            search(args.benchmark, args.model, args.top_K, 3, "FINAL_partial_learnedrerank")
+            search(args.benchmark, args.model, args.top_K, 4, "FINAL_full_learnedrerank")
+        else:
+            search(args.benchmark, args.model, args.top_K, args.search_type, args.new_directory)
 
     elif args.action == 'rerank':
         rerank(args.benchmark, args.search_type, args.top_K, args.model, args.top_N, args.input_dir, args.new_directory)

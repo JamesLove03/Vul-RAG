@@ -1,0 +1,1 @@
+{"custom_id": "Final merged log for searching BEFORE reranking. Performed using full fill blanks.", "runtime": 1.8925404666666668, "searched_items": 52, "returned_items": 1645, "prev_log": "C:\\Coding\\Work\\Vul-RAG\\Vul-RAG\\partial\\PairVul\\3_enhanced_data\\metrics\\final_log.json", "K-value": 10, "search_type": 3, "coverage": 0.7407407407407407, "recall_at_k": {}}

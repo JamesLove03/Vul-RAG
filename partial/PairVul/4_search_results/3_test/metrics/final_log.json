@@ -1,1 +1,0 @@
-{"custom_id": "Final merged log for searching BEFORE reranking. Performed using full fill blanks.", "runtime": 2.3411038666666664, "searched_items": 52, "returned_items": 894, "prev_log": "/home/ludhamm/Code/Vul-RAG_Research/Vul-RAG/partial/PairVul/3_enhanced_data/metrics/final_log.json", "K-value": 5, "search_type": 3, "normalized_recall": 1.0}

@@ -203,7 +203,7 @@ class VulRAGDetector:
                 "code": code_answer
             })
 
-        elif embed != 0:
+        if embed != 0:
             #generate embedding
             purpose_emb_answer = es_purpose.search_embed_cve(self.embedder(purpose), 0, 2, cwe_name, top_K)
             function_emb_answer = es_function.search_embed_cve(self.embedder(function), 0, 2, cwe_name, top_K)
