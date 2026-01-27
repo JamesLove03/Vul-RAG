@@ -31,7 +31,7 @@ from collections import defaultdict
 def get_cwes(benchmark): #returns a list of CWE values
 
     if benchmark == "PairVul":
-        cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"] 
+        cwes = ["CWE-476", "CWE-787"]
     elif benchmark == "TruePairVul":
         cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"]
     return cwes
@@ -46,13 +46,18 @@ def parse_command_line_arguments():
         help = 'which benchmark to test on',
     )
     parser.add_argument(
+        '--all',
+        action= 'store_true',
+        help = 'runs a preset routine to test all items'
+    )
+    parser.add_argument(
         '--desc',
         type=str,
         default = "None",
         help = 'file descriptor of the specific test being run'
     )
     parser.add_argument(
-        '--search_type',
+        '--action_type',
         type=int,
         default=0,
         help='signifies the search type. See search for details'
@@ -445,6 +450,9 @@ def search(benchmark, desc, k, search_type, dir):
             vul_function = VulD.vul_knowledge.get(f"{id}FV")
             non_vul_function = VulD.vul_knowledge.get(f"{id}FN")
 
+            if not vul_purpose:
+                continue
+
             max_items = max_items_per_cve.get(cve_id, 0)
 
             if search_type == 0: #searches only off of BM25
@@ -593,15 +601,14 @@ def search(benchmark, desc, k, search_type, dir):
 
     merge_search_log((output_dir / "metrics"), 
                     (input_dir / 'metrics' / "final_log.json"),
+                   
                     search_type,
                     k,
                     (output_dir / 'metrics' / 'final_log.json'),
                     recall_at_k
                     )
 
-
-
-def rerank(benchmark, learned, k, desc, top_N, subdir, new_dir):
+def rerank(benchmark, rerank_type, k, model, top_N, subdir, new_dir):
 
     if subdir is None:
         input_dir = Path(constant.V2_SEARCH_RESULTS_DIR.format(benchmark=benchmark))
@@ -619,20 +626,15 @@ def rerank(benchmark, learned, k, desc, top_N, subdir, new_dir):
 
     cwes = get_cwes(benchmark)
 
-
-
-    indexes = ["CWE-119", "CWE-416"] #FOR TESTING ONLY REMOVE THIS BEFORE REAL RUNS
-
-
     #define input path, and output path
-    for cwe, index in zip(cwes, indexes):
+    for cwe in cwes:
         input_file = constant.PROCESSED_OUTPUT.format(cwe=cwe)
         output_file = constant.PROCESSED_OUTPUT.format(cwe=cwe)
         input_path = input_dir / input_file
         output_path = output_dir / output_file  
-        knowledge_path = knowledge_dir / f'gpt-3.5-turbo_{index}_316_pattern_all.json'
+        knowledge_path = knowledge_dir / f'gpt-3.5-turbo_{cwe}_316_pattern_all.json'
 
-        VulD = VulRAGDetector(model_name=desc, summary_model_name=desc,knowledge_path=knowledge_path)
+        VulD = VulRAGDetector(model_name=model, summary_model_name=model,knowledge_path=knowledge_path)
         VulD.update_retrievers(cwe)
         
         VulD.add_test_knowledge(input_path)
@@ -642,10 +644,35 @@ def rerank(benchmark, learned, k, desc, top_N, subdir, new_dir):
 
         for item in VulD.test_knowledge:
             id = item["id"]
-            if learned:
+            target_cve = item["cve_id"]
+
+            vul = item.get("vul_knowledge", {})
+            nvul = item.get("non_vul_knowledge", {})
+
+            if rerank_type > 7: #using the learned reranker
                 vul_final = VulD.final_format(item["vul_knowledge"])
                 non_vul_final = VulD.final_format(item["non_vul_knowledge"])
-            else:
+            
+            else: #load RRF and single signal rerankers
+                raw_v_purpose = item["vul_knowledge"]["purpose"]
+                raw_v_function = item["vul_knowledge"]["function"]
+                raw_v_code = item["vul_knowledge"]["code"]
+
+                raw_nv_purpose = item["non_vul_knowledge"]["purpose"]
+                raw_nv_function = item["non_vul_knowledge"]["function"]
+                raw_nv_code = item["non_vul_knowledge"]["code"]
+
+            elif rerank_type == 7: #testing reranking based only on purpose
+                raw_v_purpose = item["vul_knowledge"][]
+            elif rerank_type == 6: #reranking only on function
+
+            elif rerank_type == 5: #reranking only on code
+
+            else: #reranking using RRF
+
+                
+                
+                
                 raw_v_purpose, raw_v_function, raw_v_code = item["vul_knowledge"]
                 raw_nv_purpose, raw_nv_function, raw_nv_code = item["non_vul_knowledge"]
                 
@@ -662,14 +689,14 @@ def rerank(benchmark, learned, k, desc, top_N, subdir, new_dir):
                 vul_final = create_final(vul_output, VulD, raw_v_purpose, raw_v_function, raw_v_code)
                 non_vul_final = create_final(non_vul_output, VulD, raw_nv_purpose, raw_nv_function, raw_nv_code)
             
-            output_len = len(vul_final) + len(non_vul_final)
-            total_result.append({
-                "id": id,
-                "vul_knowledge": vul_final,
-                "non_vul_knowledge": non_vul_final,
-                "vul_code": VulD.vul_knowledge[item["CVE_id"]],
-                "non_vul_code": VulD.vul_knowledge[item["CWE_id"]],
-            })
+        output_len = len(vul_final) + len(non_vul_final)
+        total_result.append({
+            "id": id,
+            "vul_knowledge": vul_final,
+            "non_vul_knowledge": non_vul_final,
+            "vul_code": VulD.vul_knowledge[item["CVE_id"]],
+            "non_vul_code": VulD.vul_knowledge[item["CWE_id"]],
+        })
         end_time = datetime.now()    
         runtime = ((end_time - start_time).total_seconds()) / 60 # gets runtime in minutes
 
@@ -1022,16 +1049,20 @@ if __name__ == '__main__':
 
     elif args.action == 'search':
         if args.all:
-            search(args.benchmark, args.model, args.top_K, 0, "FINAL_bm25")
-            search(args.benchmark, args.model, args.top_K, 1, "FINAL_bm25+embed")
-            search(args.benchmark, args.model, args.top_K, 2, "FINAL_embed")
-            search(args.benchmark, args.model, args.top_K, 3, "FINAL_partial_learnedrerank")
+            #search(args.benchmark, args.model, args.top_K, 0, "FINAL_bm25")
+            #search(args.benchmark, args.model, args.top_K, 1, "FINAL_bm25+embed")
+            #search(args.benchmark, args.model, args.top_K, 2, "FINAL_embed")
+            #search(args.benchmark, args.model, args.top_K, 3, "FINAL_partial_learnedrerank")
             search(args.benchmark, args.model, args.top_K, 4, "FINAL_full_learnedrerank")
         else:
-            search(args.benchmark, args.model, args.top_K, args.search_type, args.new_directory)
+            search(args.benchmark, args.model, args.top_K, args.action_type, args.new_directory)
 
     elif args.action == 'rerank':
-        rerank(args.benchmark, args.search_type, args.top_K, args.model, args.top_N, args.input_dir, args.new_directory)
+        rerank(args.benchmark, args.action_type, args.top_K, args.model, args.top_N, args.input_dir, args.new_directory)
+
+        if args.all:
+            rerank()
+            rerank()
 
     elif args.action == 'decision':
         decision(args.benchmark, args.input_dir, args.model, args.resume, args.prompt, args.desc)

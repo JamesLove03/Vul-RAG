@@ -55,40 +55,46 @@ class VulRAGDetector:
     def add_test_knowledge(self, path):
         self.test_knowledge = DataUtils.load_json(path)
 
-    def rerank_by_rank(self, purpose_result: list, function_result: list, code_result: list):
-        '''
-        rerank the cve_id by the rank of three results
-        :param purpose_result:
-        :param function_result:
-        :param code_result:
-        :return:
-        '''
-        cve_id_list = function_result + purpose_result + code_result
-        cve_id_list = list(set(cve_id_list))
-        weight = self.retrieval_rank_weight[:3]
-        cve_id_dict = {}
-        for cve_id in cve_id_list:
-            try:
-                cve_id_dict[cve_id] = 0
-                purpose_index = purpose_result.index(cve_id) if cve_id in purpose_result else len(purpose_result)
-                function_index = function_result.index(cve_id) if cve_id in function_result else len(function_result)
-                code_index = code_result.index(cve_id) if cve_id in code_result else len(code_result)
-                cve_id_dict[cve_id] += purpose_index * weight[0] + function_index * weight[1] + code_index * weight[2]
+    def rerank_by_rank(self, purpose_result: list, function_result: list, code_result: list, purpose_emb_result: list, function_emb_result: list, code_emb_result: list):
+        """
+        Rerank CVE IDs using weighted rank aggregation across six ranked lists
+        """
 
-            except Exception as e:
-                logging.error(f"Error: {e}")
+        results = [
+            purpose_result,
+            function_result,
+            code_result,
+            purpose_emb_result,
+            function_emb_result,
+            code_emb_result,
+        ]
 
-        cve_id_dict = sorted(cve_id_dict.items(), key = lambda x: x[1], reverse = False)
+        # one weight per list (must be length 6)
+        weights = self.retrieval_rank_weight[:6]
 
-        final_result = []
-        for item in cve_id_dict:
-            id_info = {}
-            id_info["cve_id"] = item[0]
-            id_info["count"] = item[1]
-            final_result.append(id_info)
+        # union of all CVE IDs
+        cve_id_set = set()
+        for r in results:
+            cve_id_set.update(r)
 
-        return final_result
+        cve_id_scores = {}
 
+        for cve_id in cve_id_set:
+            score = 0
+            for r, w in zip(results, weights):
+                rank = r.index(cve_id) if cve_id in r else len(r)
+                score += rank * w
+            cve_id_scores[cve_id] = score
+
+        # lower score = better rank
+        sorted_results = sorted(cve_id_scores.items(), key=lambda x: x[1])
+
+        return [
+            {"cve_id": cve_id, "count": score}
+            for cve_id, score in sorted_results
+        ]
+    
+    
     def format_retrieved_answer(self, purpose_answer, function_answer, code_answer):
         '''
         format the retrieval answer
