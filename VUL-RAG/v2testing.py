@@ -31,9 +31,10 @@ from collections import defaultdict
 def get_cwes(benchmark): #returns a list of CWE values
 
     if benchmark == "PairVul":
-        cwes = ["CWE-476", "CWE-787"]
-    elif benchmark == "TruePairVul":
         cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"]
+
+    elif benchmark == "TruePairVul":
+        cwes = ["CWE-401", "CWE-416", "CWE-476", "CWE-787"]
     return cwes
 
 def parse_command_line_arguments():
@@ -662,13 +663,13 @@ def rerank(benchmark, rerank_type, k, model, top_N, subdir, new_dir):
                 raw_nv_function = item["non_vul_knowledge"]["function"]
                 raw_nv_code = item["non_vul_knowledge"]["code"]
 
-            elif rerank_type == 7: #testing reranking based only on purpose
-                raw_v_purpose = item["vul_knowledge"][]
-            elif rerank_type == 6: #reranking only on function
+            # elif rerank_type == 7: #testing reranking based only on purpose
+            #     raw_v_purpose = item["vul_knowledge"][]
+            # elif rerank_type == 6: #reranking only on function
 
-            elif rerank_type == 5: #reranking only on code
+            # elif rerank_type == 5: #reranking only on code
 
-            else: #reranking using RRF
+            # else: #reranking using RRF
 
                 
                 
@@ -1049,10 +1050,10 @@ if __name__ == '__main__':
 
     elif args.action == 'search':
         if args.all:
-            #search(args.benchmark, args.model, args.top_K, 0, "FINAL_bm25")
-            #search(args.benchmark, args.model, args.top_K, 1, "FINAL_bm25+embed")
-            #search(args.benchmark, args.model, args.top_K, 2, "FINAL_embed")
-            #search(args.benchmark, args.model, args.top_K, 3, "FINAL_partial_learnedrerank")
+            # search(args.benchmark, args.model, args.top_K, 0, "FINAL_bm25")
+            # search(args.benchmark, args.model, args.top_K, 1, "FINAL_bm25+embed")
+            # search(args.benchmark, args.model, args.top_K, 2, "FINAL_embed")
+            # search(args.benchmark, args.model, args.top_K, 3, "FINAL_partial_learnedrerank")
             search(args.benchmark, args.model, args.top_K, 4, "FINAL_full_learnedrerank")
         else:
             search(args.benchmark, args.model, args.top_K, args.action_type, args.new_directory)
