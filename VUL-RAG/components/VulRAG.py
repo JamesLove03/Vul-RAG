@@ -19,6 +19,7 @@ import numpy as np
 import lightgbm as lgb
 import os
 import datetime
+from pathlib import Path
 
 class VulRAGDetector:
     def __init__(
@@ -55,7 +56,7 @@ class VulRAGDetector:
     def add_test_knowledge(self, path):
         self.test_knowledge = DataUtils.load_json(path)
 
-    def rerank_by_rank(self, purpose_result: list, function_result: list, code_result: list, purpose_emb_result: list, function_emb_result: list, code_emb_result: list):
+    def rerank_by_rank(self, purpose_result: list, function_result: list, code_result: list, purpose_emb_result: list = None, function_emb_result: list = None, code_emb_result: list = None):
         """
         Rerank CVE IDs using weighted rank aggregation across six ranked lists
         """
@@ -64,10 +65,13 @@ class VulRAGDetector:
             purpose_result,
             function_result,
             code_result,
-            purpose_emb_result,
-            function_emb_result,
-            code_emb_result,
         ]
+
+        if purpose_emb_result is not None: #deal with optionally take 6 entries
+            results.append(purpose_emb_result)
+            results.append(function_emb_result)
+            results.append(code_emb_result)
+
 
         # one weight per list (must be length 6)
         weights = self.retrieval_rank_weight[:6]
@@ -240,16 +244,21 @@ class VulRAGDetector:
             )
         return code_list
 
-    def learned_reranker(self, input_dict, top_N=10):
+    def learned_reranker(self, input_dict, partial = False, benchmark = "PairVul", top_N=10):
         #create a np.array of the vectors and also create a second array that holds the keys
         ordered_keys = list(input_dict.keys())
         scores_array = np.array([input_dict[key]["scores"] for key in input_dict])
-        
+
         #iterate through the 5 different models
-        output_dir = constant.V2_LEARNED_RERANKER_DIR.format(benchmark="PairVul")
+        subdir = 'full_rerank'
+        if partial:
+            subdir = 'partial_rerank'
+
+        model_file_dir = Path(constant.V2_LEARNED_RERANKER_DIR.format(benchmark=benchmark)) / subdir
+        
         models = []
         for fold_idx in range(1,6):
-            model_path = os.path.join(output_dir, f"model_fold_{fold_idx}.txt")
+            model_path = os.path.join(model_file_dir, f"model_fold_{fold_idx}.txt")
             assert os.path.exists(model_path), f"Model file not found: {model_path}"
             model = lgb.Booster(model_file=model_path)
             models.append(model)
@@ -264,9 +273,9 @@ class VulRAGDetector:
         
         return top_10_dict
 
-    def final_format(self, response):
+    def final_format(self, response, partial, benchmark):
 
-        reranked_results = self.learned_reranker(response)
+        reranked_results = self.learned_reranker(response, partial, benchmark)
 
         #swap the id field in this top k variable with the cve_id that can be used to fill out info
         true_id_list = [int(key) for key in reranked_results.keys()]

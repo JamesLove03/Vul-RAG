@@ -1,1 +1,0 @@
-{"custom_id": "Final merged log for searching BEFORE reranking. Performed using full fill blanks.", "runtime": 0.00157925, "searched_items": 9, "returned_items": 40, "embeddings_included": true, "prev_log": "/home/ludhamm/Code/Vul-RAG_Research/Vul-RAG/partial/PairVul/4_search_results/gpt-3.5-turbo_topk=10/metrics/final_log.json", "K-value": 10}
