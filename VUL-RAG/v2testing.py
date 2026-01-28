@@ -32,7 +32,7 @@ from collections import defaultdict
 def get_cwes(benchmark): #returns a list of CWE values
 
     if benchmark == "PairVul":
-        cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"]
+        cwes = ["CWE-264", "CWE-401"]
     elif benchmark == "TruePairVul":
         cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"]
     return cwes
@@ -1209,6 +1209,7 @@ if __name__ == '__main__':
 
     elif args.action == 'decision':
         decision(args.benchmark, args.input_dir, args.model, args.resume, args.prompt, args.desc)
+
     elif args.action == 'test':
         output_dir = 'C:/Coding/Work/Vul-RAG/Vul-RAG/partial/PairVul/6_decision_results/gpt-3.5-turbo_prompt=0_test_run/10_maxentries_results'
         cut_down(output_dir)
