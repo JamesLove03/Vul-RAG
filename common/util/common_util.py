@@ -103,6 +103,81 @@ def merge_search_log(search_log_dir, prev_path, search_type, k_val, output_path,
         f.write("\n")
 
 
+def merge_rerank_log(rerank_log_dir, prev_path, rerank_type, output_path):
+    
+    total_ndcg = 0
+    ndcg_1 = 0
+    ndcg_3 = 0
+    ndcg_5 = 0
+    ndcg_10 = 0
+    runtime = 0
+    searched_item = 0
+    returned_item = 0
+
+    for file in Path(rerank_log_dir).iterdir():
+        if file.name == "final_log.json":
+            continue
+        with file.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        
+        total_ndcg += data["total_ndcg_items"]
+        ndcg_1 += data["ndcg_sum_1"]
+        ndcg_3 += data["ndcg_sum_3"]
+        ndcg_5 += data["ndcg_sum_5"]
+        ndcg_10 += data["ndcg_sum_10"]
+        runtime += data["runtime"]
+        searched_item += data["searched_items"]
+        returned_item += data["returned_items"]
+ 
+    entry = copy.deepcopy(constant.SEARCH_LOG_FORMAT)
+    entry["custom_id"] = "Final merged log for reranking!"
+    entry["runtime"] = runtime
+    entry["input_items"] = searched_item
+    entry["returned_items"] = returned_item
+    entry["runtime"] = runtime
+    entry["rerank_type"] = rerank_type
+    entry["prev_log"] = str(prev_path)
+
+    entry["NDCG@1"] = round((ndcg_1 / total_ndcg), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+    entry["NDCG@3"] = round((ndcg_3 / total_ndcg), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+    entry["NDCG@5"] = round((ndcg_5 / total_ndcg), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+    entry["NDCG@10"] = round((ndcg_10 / total_ndcg), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with output_path.open("a", encoding="utf-8") as f:
+        json.dump(entry, f)
+        f.write("\n")
+
+def fill_rerank_log(id, num_items, returned_items, rerank_type, prev_path, output_path, runtime, ndcg_items, ndcg1, ndcg3, ndcg5, ndcg10):
+    entry = copy.deepcopy(constant.SEARCH_LOG_FORMAT)
+    entry["custom_id"] = id
+    entry["runtime"] = runtime
+    entry["searched_items"] = num_items
+    entry["returned_items"] = returned_items
+    entry["prev_log"] = prev_path
+    entry["K-value"] = 10
+
+    entry["rerank_type"] = rerank_type
+    entry["total_ndcg_items"] = ndcg_items
+    entry["ndcg_sum_1"] = ndcg1
+    entry["ndcg_sum_3"] = ndcg3
+    entry["ndcg_sum_5"] = ndcg5
+    entry["ndcg_sum_10"] = ndcg10
+
+    entry["NDCG@1"] = round((ndcg1 / ndcg_items), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+    entry["NDCG@3"] = round((ndcg3 / ndcg_items), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+    entry["NDCG@5"] = round((ndcg5 / ndcg_items), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+    entry["NDCG@10"] = round((ndcg10 / ndcg_items), cfg.METRICS_DECIMAL_PLACES_RESERVED)
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with output_path.open("a", encoding="utf-8") as f:
+        json.dump(entry, f)
+        f.write("\n")
+
 def fill_search_log(id, num_items, returned_items, search_type, prev_path, output_path, runtime, k_val, max_items, vul_found, non_vul_found):
     entry = copy.deepcopy(constant.SEARCH_LOG_FORMAT)
     entry["custom_id"] = id

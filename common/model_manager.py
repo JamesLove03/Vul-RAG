@@ -91,7 +91,7 @@ class BaseModel:
         except Exception as e:
             logging.error(f"Error while calling {self.__model_name} API: {e}")
         logging.disable(logging.NOTSET)
-        return response_content#, input_tokens, output_tokens
+        return response_content, input_tokens, output_tokens
     
     def get_model_name(self):
         return self.__model_name
