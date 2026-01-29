@@ -1,0 +1,1 @@
+{"custom_id": "Searching elasticsearch for CWE-200", "runtime": 3.012067033333333, "searched_items": 80, "returned_items": 2588, "prev_log": "C:\\Coding\\Work\\Vul-RAG\\Vul-RAG\\partial\\TruePairVul\\3_enhanced_data\\metrics\\CWE-200log.json", "K-value": 10, "search_type": 3, "coverage": 0.9349, "max_items": 292, "found_items": 273}

@@ -1,0 +1,1 @@
+{"custom_id": "Searching elasticsearch for CWE-125", "runtime": 32.796486699999996, "searched_items": 84, "returned_items": 2562, "prev_log": "C:\\Coding\\Work\\Vul-RAG\\Vul-RAG\\partial\\TruePairVul\\3_enhanced_data\\metrics\\CWE-125log.json", "K-value": 10, "search_type": 4, "coverage": 0.9812, "max_items": 160, "found_items": 157}
