@@ -58,6 +58,7 @@ claude_api_key = DataUtils.load_data_from_pickle_file(PathUtil.api_keys_data("cl
 gemini_api_base = "https://generativelanguage.googleapis.com/v1beta/models"
 gemini_api_key = DataUtils.load_data_from_pickle_file(PathUtil.api_keys_data("gemini_api_key", "pkl"))
 
+
 OPENAI_API_CONNECTION_PROXY = "http://localhost:7890"
 DEFAULT_MAX_TOKENS = 2048
 # ----------------------- config for OpenAI API -----------------------

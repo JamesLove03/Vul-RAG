@@ -152,7 +152,7 @@ GPT_BATCH_TEMPLATE = {"custom_id": "{id}", "method": "POST", "url": "/v1/chat/co
 ANTHROPIC_BATCH_TEMPLATE = {"custom_id": "", "params": {"model": "", "messages": "{message_list}","max_tokens": 0}}
 GEMINI_BATCH_TEMPLATE = {"key": "", "request": { "model": "", "system_instruction": {"parts": [{ "text": "" }] }, "contents": [{"parts": [{"text": "" }], "role": "user"}], "generationConfig": {"maxOutputTokens": 0}}}
 
-DETECTION_RESULTS_SUBDIR = "{model_name}_prompt={prompt}_{info}"
+DETECTION_RESULTS_SUBDIR = "{info}_{model_name}_prompt={prompt}"
 DETECTION_RESULTS_DIR = "{k}_maxentries_results"
 DETECTION_OUTPUT_FILENAME = "{cwe}.json"
 VUL_KNOWLEDGE_PATTERN_FILE_NAME = "{model_name}_{cwe_id}_316_pattern_all"

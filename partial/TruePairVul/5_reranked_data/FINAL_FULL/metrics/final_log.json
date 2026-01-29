@@ -1,0 +1,1 @@
+{"custom_id": "Final merged log for reranking!", "runtime": 0.4637871, "searched_items": 0, "returned_items": 698, "prev_log": "C:\\Coding\\Work\\Vul-RAG\\Vul-RAG\\partial\\TruePairVul\\4_search_results\\FINAL_full_learnedrerank\\metrics\\final_log.json", "K-value": 0, "input_items": 698, "rerank_type": 0, "NDCG@1": 0.8027, "NDCG@3": 0.815, "NDCG@5": 0.8211, "NDCG@10": 0.834}

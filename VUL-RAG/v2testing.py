@@ -32,12 +32,10 @@ from collections import defaultdict
 def get_cwes(benchmark): #returns a list of CWE values
 
     if benchmark == "PairVul":
-        cwes = ["CWE-264", "CWE-401"]
-    elif benchmark == "TruePairVul":
-        cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"]
+        cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"]    
 
     elif benchmark == "TruePairVul":
-        cwes = ["CWE-401", "CWE-416", "CWE-476", "CWE-787"]
+        cwes = ["CWE-20", "CWE-119", "CWE-125", "CWE-200", "CWE-264", "CWE-362", "CWE-401", "CWE-416", "CWE-476", "CWE-787"]
     return cwes
 
 def parse_command_line_arguments():
@@ -880,7 +878,6 @@ def decision(benchmark, subdir, model, resume, prompt, description):
         output_path = output_dir / constant.DETECTION_OUTPUT_FILENAME.format(cwe=cwe)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-
         ckpt_cve_list = []
         vul_output_list = []
         non_vul_output_list = []
@@ -895,7 +892,7 @@ def decision(benchmark, subdir, model, resume, prompt, description):
                     # to avoid overwriting the existing output file
                     raise FileNotFoundError(f"Checkpoint file {checkpoint_path} not found.")
         
-        for item in tqdm(knowledge_list):
+        for item in tqdm(knowledge_list[:10]):
             id = item["id"]
             vul_knowledge = item["vul_knowledge"]
             non_vul_knowledge = item["non_vul_knowledge"]
@@ -929,9 +926,6 @@ def decision(benchmark, subdir, model, resume, prompt, description):
 
     #calculate metrics and trim down item
     cut_down(output_dir)
-
-
-            
 
     return 0
 
@@ -1062,6 +1056,7 @@ def run_decision(vul_knowledge, code_snippet, query_cve, model_instance, purpose
     start_time = datetime.now()
 
     for knowledge in vul_knowledge[:10]:
+
         total_entries += 1
         vul_detect_prompt = common_prompt.VulRAGPrompt.get_vul_prompt_by_key(prompt, code_snippet, knowledge)
         sol_detect_prompt = common_prompt.VulRAGPrompt.get_sol_prompt_by_key(prompt, code_snippet, knowledge)
@@ -1184,34 +1179,39 @@ if __name__ == '__main__':
     elif args.action == 'rerank':
 
         if args.all:
-            rerank("PairVul", 0, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL:50-50", False)
-            rerank("PairVul", 1, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL:25-75", False)
-            rerank("PairVul", 2, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL:75-25", False)
-            rerank("PairVul", 3, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL:EMB", False)
-            rerank("PairVul", 4, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL:BM25", False)
-            rerank("PairVul", 5, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL:FUNC", False)
-            rerank("PairVul", 6, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL:PURP", False)
-            rerank("PairVul", 7, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL:CODE", False)
-            rerank("PairVul", 8, args.top_K, args.model, 10, "FINAL_partial_learnedrerank", "FINAL:PARTIAL", True)
-            rerank("PairVul", 9, args.top_K, args.model, 10, "FINAL_full_learnedrerank", "FINAL:FULL", True)
+            rerank("PairVul", 0, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL_50-50", False)
+            rerank("PairVul", 1, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL_25-75", False)
+            rerank("PairVul", 2, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL_75-25", False)
+            rerank("PairVul", 3, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL_EMB", False)
+            rerank("PairVul", 4, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL_BM25", False)
+            rerank("PairVul", 5, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL_FUNC", False)
+            rerank("PairVul", 6, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL_PURP", False)
+            rerank("PairVul", 7, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL_CODE", False)
+            rerank("PairVul", 8, args.top_K, args.model, 10, "FINAL_partial_learnedrerank", "FINAL_PARTIAL", True)
+            rerank("PairVul", 9, args.top_K, args.model, 10, "FINAL_full_learnedrerank", "FINAL_FULL", True)
             
-            rerank("TruePairVul", 0, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL:50-50", False)
-            rerank("TruePairVul", 1, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL:25-75", False)
-            rerank("TruePairVul", 2, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL:75-25", False)
-            rerank("TruePairVul", 3, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL:EMB", False)
-            rerank("TruePairVul", 4, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL:BM25", False)
-            rerank("TruePairVul", 5, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL:FUNC", False)
-            rerank("TruePairVul", 6, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL:PURP", False)
-            rerank("TruePairVul", 7, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL:CODE", False)
-            rerank("TruePairVul", 8, args.top_K, args.model, 10, "FINAL_partial_learnedrerank", "FINAL:PARTIAL", True)
-            rerank("TruePairVul", 9, args.top_K, args.model, 10, "FINAL_full_learnedrerank", "FINAL:FULL", True)
+            rerank("TruePairVul", 0, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL_50-50", False)
+            rerank("TruePairVul", 1, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL_25-75", False)
+            rerank("TruePairVul", 2, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL_75-25", False)
+            rerank("TruePairVul", 3, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL_EMB", False)
+            rerank("TruePairVul", 4, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL_BM25", False)
+            rerank("TruePairVul", 5, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL_FUNC", False)
+            rerank("TruePairVul", 6, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL_PURP", False)
+            rerank("TruePairVul", 7, args.top_K, args.model, 10, "FINAL_bm25+embed", "FINAL_CODE", False)
+            rerank("TruePairVul", 8, args.top_K, args.model, 10, "FINAL_partial_learnedrerank", "FINAL_PARTIAL", True)
+            rerank("TruePairVul", 9, args.top_K, args.model, 10, "FINAL_full_learnedrerank", "FINAL_FULL", True)
 
         else:
             rerank(args.benchmark, args.action_type, args.top_K, args.model, args.top_N, args.input_dir, args.new_directory, args.learned)
 
 
     elif args.action == 'decision':
-        decision(args.benchmark, args.input_dir, args.model, args.resume, args.prompt, args.desc)
+        
+        if args.all:
+
+        else:
+            decision(args.benchmark, args.input_dir, args.model, args.resume, args.prompt, args.desc)
+
 
     elif args.action == 'test':
         output_dir = 'C:/Coding/Work/Vul-RAG/Vul-RAG/partial/PairVul/6_decision_results/gpt-3.5-turbo_prompt=0_test_run/10_maxentries_results'

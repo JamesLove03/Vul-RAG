@@ -346,62 +346,73 @@ class VulRAGDetector:
 
         return combined
 
-    def fill_blanks(self, purpose_ds, function_ds, code_ds, dicts, queries):
+    def fill_blanks(self, answers):
         all_keys = set()
-        combined = {}
-        for d in dicts:
+
+        for d in answers:
             all_keys.update(d.keys())
 
+        combined = {}
         for key in all_keys:
             scores = []
-            for i, d in enumerate(dicts):
-                if key not in d:
-                    if i == 0: #code dict missing
-                        res = code_ds.search_cve(query = queries[i], idx = 0, filteridx = 3, cve_id = key)
-                        if res is not None and key in res and res[key] is not None:
-                            d[key] = res[key]
-                        else:
-                            d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
-                            print("Empty code on: ", key)
-                    elif i == 1: #code embed dict missing
-                        res = code_ds.search_embed_cve(query = queries[i], idx = 0, filteridx = 3, cve_id = key)
-                        if res is not None and key in res and res[key] is not None:
-                            d[key] = res[key]
-                        else:
-                            d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
-                            print("Empty code emb on: ", key)
-                    elif i == 2: #function dict missing
-                        res = function_ds.search_cve(query = queries[i], idx = 1, filteridx = 3, cve_id = key)
-                        if res is not None and key in res and res[key] is not None:
-                            d[key] = res[key]
-                        else:
-                            d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
-                            print("Empty function on: ", key)
-                    elif i == 3: #function embed dict missing
-                        res = function_ds.search_embed_cve(query = queries[i], idx = 1, filteridx = 3, cve_id = key)
-                        if res is not None and key in res and res[key] is not None:
-                            d[key] = res[key]
-                        else:
-                            d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
-                            print("Empty emb function on: ", key)
-                    elif i == 4: #purpose dict missing
-                        res = purpose_ds.search_cve(query = queries[i], idx = 2, filteridx = 3, cve_id = key)
-                        if res is not None and key in res and res[key] is not None:
-                            d[key] = res[key]
-                        else:
-                            d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
-                    elif i == 5: #purpose embed dict missing
-                        res = purpose_ds.search_embed_cve(query = queries[i], idx = 2, filteridx = 3, cve_id = key)
-                        if res is not None and key in res and res[key] is not None:
-                            d[key] = res[key]
-                        else:
-                            d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
-                            print("Empty emb purpose on: ", key)
-                    else:
-                        print("Passed too many dicts")
-                scores.append(d[key]["score"])
-            
+            for d in answers:
+                if key in d and d[key] is not None:
+                    scores.append(d[key]["score"])
+                else:
+                    scores.append(0)
             combined[key] = {"scores": scores}
+            
+
+        # for key in all_keys:
+        #     scores = []
+        #     for i, d in enumerate(dicts):
+        #         if key not in d:
+        #             if i == 0: #code dict missing
+        #                 res = code_ds.search_cve(query = queries[i], idx = 0, filteridx = 3, cve_id = key)
+        #                 if res is not None and key in res and res[key] is not None:
+        #                     d[key] = res[key]
+        #                 else:
+        #                     d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
+        #                     print("Empty code on: ", key)
+        #             elif i == 1: #code embed dict missing
+        #                 res = code_ds.search_embed_cve(query = queries[i], idx = 0, filteridx = 3, cve_id = key)
+        #                 if res is not None and key in res and res[key] is not None:
+        #                     d[key] = res[key]
+        #                 else:
+        #                     d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
+        #                     print("Empty code emb on: ", key)
+        #             elif i == 2: #function dict missing
+        #                 res = function_ds.search_cve(query = queries[i], idx = 1, filteridx = 3, cve_id = key)
+        #                 if res is not None and key in res and res[key] is not None:
+        #                     d[key] = res[key]
+        #                 else:
+        #                     d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
+        #                     print("Empty function on: ", key)
+        #             elif i == 3: #function embed dict missing
+        #                 res = function_ds.search_embed_cve(query = queries[i], idx = 1, filteridx = 3, cve_id = key)
+        #                 if res is not None and key in res and res[key] is not None:
+        #                     d[key] = res[key]
+        #                 else:
+        #                     d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
+        #                     print("Empty emb function on: ", key)
+        #             elif i == 4: #purpose dict missing
+        #                 res = purpose_ds.search_cve(query = queries[i], idx = 2, filteridx = 3, cve_id = key)
+        #                 if res is not None and key in res and res[key] is not None:
+        #                     d[key] = res[key]
+        #                 else:
+        #                     d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
+        #             elif i == 5: #purpose embed dict missing
+        #                 res = purpose_ds.search_embed_cve(query = queries[i], idx = 2, filteridx = 3, cve_id = key)
+        #                 if res is not None and key in res and res[key] is not None:
+        #                     d[key] = res[key]
+        #                 else:
+        #                     d[key] = {"cve_id": "Whoops", "score": 0, "id": key}
+        #                     print("Empty emb purpose on: ", key)
+        #             else:
+        #                 print("Passed too many dicts")
+        #         scores.append(d[key]["score"])
+            
+        #     combined[key] = {"scores": scores}
         return combined
 
     def retrieve_learned_knowledge(self, cwe_name, code_snippet, purpose, function, top_k=10, backfill=True, early_exit=False):
@@ -417,21 +428,24 @@ class VulRAGDetector:
         es_code = self.code
 
         #search bm25 results
-        purpose_answer = es_purpose.search_cve(query = purpose, idx = 2, filteridx = 2, cve_id=1, top_k=top_k)
-        function_answer = es_function.search_cve(query = function, idx = 1, filteridx = 2, cve_id=1, top_k=top_k)        
-        code_answer = es_code.search_cve(query = code_snippet, idx = 0, filteridx = 2, cve_id=1, top_k=top_k)   
+        purpose_answer = es_purpose.search_cve(query = purpose, idx = 2, filteridx = 2, cve_id=1, top_k=1000)
+        function_answer = es_function.search_cve(query = function, idx = 1, filteridx = 2, cve_id=1, top_k=1000)        
+        code_answer = es_code.search_cve(query = code_snippet, idx = 0, filteridx = 2, cve_id=1, top_k=1000)   
 
         #search emb results
-        purpose_embed_answer = es_purpose.search_embed_cve(query = purpose_embed, idx = 2, filteridx = 2, cve_id=1, top_k=top_k)
-        function_embed_answer = es_function.search_embed_cve(query = function_embed, idx = 1, filteridx = 2, cve_id=1, top_k=top_k)        
-        code_embed_answer = es_code.search_embed_cve(query = code_embed, idx = 0, filteridx = 2, cve_id=1, top_k=top_k)
+        purpose_embed_answer = es_purpose.search_embed_cve(query = purpose_embed, idx = 2, filteridx = 2, cve_id=1, top_k=1000)
+        function_embed_answer = es_function.search_embed_cve(query = function_embed, idx = 1, filteridx = 2, cve_id=1, top_k=1000)        
+        code_embed_answer = es_code.search_embed_cve(query = code_embed, idx = 0, filteridx = 2, cve_id=1, top_k=1000)
         #call fill_blanks
-        dicts = [code_answer, code_embed_answer, function_answer, function_embed_answer, purpose_answer, purpose_embed_answer]
-        queries = [code_snippet, code_embed, function, function_embed, purpose, purpose_embed]
+        answers = [code_answer, code_embed_answer, function_answer, function_embed_answer, purpose_answer, purpose_embed_answer]
+
         if backfill:
-            response = self.fill_blanks(es_purpose, es_function, es_code, dicts, queries)  
+            response = self.fill_blanks(answers)  
         else:
-            response = self.fill_empty_blanks(dicts)
+            for i in range(len(answers)):
+                answers[i] = answers[i][:top_k]  # keep only top_k items per response list
+
+            response = self.fill_empty_blanks(answers)
 
         #if we want a early return perform that here
         if early_exit:

@@ -6,6 +6,11 @@ import time
 from util.common_util import fill_template
 from google import genai
 from google.genai import types
+import anthropic
+import pdb
+from google.genai import client as GClient
+
+
 try:
     from anthropic import Anthropic
 except:
@@ -120,7 +125,6 @@ class BaseModel:
         with open(output_path, "w") as f:
             for obj in batch:
                 f.write(json.dumps(obj) + "\n")
-
         
 
 class DeepSeekModel(BaseModel):
@@ -136,10 +140,9 @@ class GPTModel(BaseModel):
         super().__init__(
             model_name = model_name,
             base_url = cfg.openkey_openai_api_base,
-            api_key = cfg.openkey_openai_api_key
+            api_key = cfg.gemini_api_key
         )
         self._set_client(openai.OpenAI(api_key = self.get_api_key(), base_url = self.get_base_url()))
-
 
     def upload_file(self, filepath):
         client = self.get_client()
@@ -223,10 +226,71 @@ class GeminiModel(BaseModel):
     def __init__(self, model_name):
         super().__init__(
             model_name = model_name,
-            base_url = cfg.gemini_api_base,
+            base_url = "none",
             api_key = cfg.gemini_api_key
         )
-        self._set_client(genai.Client(api_key = self.get_api_key()))
+        self._set_client(GClient.Client(api_key = self.get_api_key()))
+
+    def load_sys(self, sys_prompt):
+            self.__sys_prompt = sys_prompt
+    
+    def get_sys(self):
+        return self.__sys_prompt
+
+    def get_messages(self, user_prompt: str, sys_prompt: str = None) -> list:
+        messages = []
+        
+        self.load_sys(sys_prompt)
+
+        messages = [
+            {
+                "role": "user",
+                "parts": [
+                    {
+                        "text": user_prompt
+                    }
+                ]
+            }
+        ]
+        
+        return messages
+
+    def get_response_with_messages(self, messages, **kwargs):
+        logging.disable(logging.INFO)
+        response_content = None
+
+        client = self.get_client()
+
+        if "2.5" in self.get_model_name():
+            thinking_config = types.ThinkingConfig(thinking_budget=16000)
+        elif "3" in self.get_model_name():
+            thinking_config = types.ThinkingConfig(thinking_level="high")
+        else:
+            params = None
+
+        sys_prompt = self.get_sys()
+
+        config = types.GenerateContentConfig(
+            thinking_config=thinking_config,
+            system_instruction=sys_prompt
+        )
+
+        try:
+            response = client.models.generate_content(
+                model=self.get_model_name(),
+                contents=messages,
+                config=config
+            )
+            # Extract text
+            response_content = response.text 
+
+        except Exception as e:
+            logging.error(f"Error while calling {self.get_model_name()} API: {e}")
+
+        output_tok = response.usage_metadata.candidates_token_count + response.usage_metadata.thoughts_token_count
+        logging.disable(logging.NOTSET)
+
+        return response_content, response.usage_metadata.prompt_token_count, output_tok
 
     def upload_file(self, filepath): #uploads a jsonl file to the API 
         client = self.get_client()
@@ -334,32 +398,84 @@ class ClaudeModel(BaseModel):
         )
         self._set_client(Anthropic(api_key = cfg.claude_api_key, base_url = cfg.claude_api_base))
         self.__sys_prompt = None
-    
-    # def get_messages(self, user_prompt: str, sys_prompt: str = None) -> list:
-    #     messages = [{"role": "user", "content": user_prompt}]
-    #     self.__sys_prompt = sys_prompt
-    #     return messages
 
-    def get_response_with_messages(self, messages: list, **kwargs) -> str:
+    def load_sys(self, sys_prompt):
+        self.__sys_prompt = sys_prompt
+    
+    def get_sys(self):
+        return self.__sys_prompt
+
+    def get_messages(self, user_prompt: str, sys_prompt: str = None) -> list:
+        """
+        Returns messages list and system prompt separately for Claude API.
+        Claude handles system prompts as a separate parameter, not in messages.
+        """
+        self.load_sys(sys_prompt)
+        messages = [{"role": "user", "content": user_prompt}]
+
+        return messages
+
+    def get_response_with_messages(self, messages: list, **kwargs) -> tuple:
         logging.disable(logging.INFO)
+        response_content = None
+        input_tokens = 0
+        output_tokens = 0
+        client = self.get_client()
+
         try:
-            max_tokens = kwargs.pop("max_tokens", cfg.CLAUDE_DEFAULT_MAX_TOKENS)
-            # system prompt in kwargs will override the default system prompt
-            sys_prompt = kwargs.pop("system", self.__sys_prompt)
-            response = self._client.messages.create(
-                model = self.get_model_name(),
-                messages = messages,
-                max_tokens = max_tokens,
-                system = sys_prompt,
-                **kwargs
-            )
-            logging.disable(logging.NOTSET)
-            return response.content[0].text
+            if client is not None:               
+                response = client.messages.create(
+                    model = self.get_model_name(),
+                    messages = messages,
+                    max_tokens = 20096,
+                    stream = False,
+                    system = self.get_sys(),
+                    thinking = {
+                        "type": "enabled",
+                        "budget_tokens": 16000 # This is Claude's version of thinking_config
+                    }
+                )
+
+                # Claude returns content as a list of content blocks
+                for block in response.content:
+                    if block.type == "thinking":
+                        continue
+                    elif block.type == "text":
+                        response_content = block.text
+                
+                if response.usage:
+                    input_tokens = response.usage.input_tokens
+                    output_tokens = response.usage.output_tokens
+
+            else:
+                # If using anthropic module directly
+                client = anthropic.Anthropic(api_key=self.get_api_key())
+                
+                request_params = {
+                    "model": self.get_model_name(),
+                    "messages": messages,
+                    "max_tokens": kwargs.pop("max_tokens", cfg.DEFAULT_MAX_TOKENS),
+                    **kwargs
+                }
+                
+                if self.get_sys() is not None:
+                    request_params["system"] = self.get_sys()
+                
+                response = client.messages.create(**request_params)
+                
+                if response.usage:
+                    input_tokens = response.usage.input_tokens
+                    output_tokens = response.usage.output_tokens
+
+                response_content = response.content[0].text
+                
         except Exception as e:
             logging.error(f"Error while calling {self.get_model_name()} API: {e}")
-            logging.disable(logging.NOTSET)
-            return None
+        
+        logging.disable(logging.NOTSET)
+        return response_content, input_tokens, output_tokens
     
+
     def upload_file(self, filepath):
         batch_requests = []
 
